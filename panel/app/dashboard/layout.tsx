@@ -30,6 +30,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Link href="/dashboard" className="transition-colors hover:text-foreground">
                 Atletas
               </Link>
+              <Link href="/dashboard/routines" className="transition-colors hover:text-foreground">
+                Rutinas
+              </Link>
               <Link href="/dashboard/exercises" className="transition-colors hover:text-foreground">
                 Ejercicios
               </Link>

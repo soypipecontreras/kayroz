@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { parseItems } from "@/lib/routineItems";
 
 // Alta manual: no pasa por código de invitación ni WhatsApp (todavía no hay
 // canal conectado). El coach carga el atleta directo desde el panel; cuando
@@ -76,7 +77,10 @@ export async function generateAthleteAccess(athleteId: string) {
   revalidatePath(`/dashboard/athletes/${athleteId}`);
 }
 
-export async function assignRoutine(athleteId: string, formData: FormData) {
+// Copia una plantilla del coach a un atleta. Se COPIA, no se referencia: si
+// después el coach edita la plantilla, lo que ese atleta ya venía entrenando no
+// cambia solo. Ver 20260820000000_routine_templates.sql.
+export async function assignFromTemplate(athleteId: string, formData: FormData) {
   const supabase = await createClient();
 
   const {
@@ -84,94 +88,95 @@ export async function assignRoutine(athleteId: string, formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const templateId = String(formData.get("template_id") ?? "");
+  const back = `/dashboard/athletes/${athleteId}`;
+  if (!templateId) redirect(`${back}?error=${encodeURIComponent("Elegí una rutina")}`);
+
+  const { data: template } = await supabase
+    .from("routine_templates")
+    .select("id, nombre")
+    .eq("id", templateId)
+    .maybeSingle();
+  if (!template) redirect(`${back}?error=${encodeURIComponent("No encontramos esa rutina")}`);
+
+  const { data: templateExercises } = await supabase
+    .from("routine_template_exercises")
+    .select("exercise_id, orden, series_obj, reps_min, reps_max, rpe_obj, descanso_seg, notas, imagen_path, video_path")
+    .eq("template_id", templateId)
+    .order("orden", { ascending: true });
+
+  if (!templateExercises || templateExercises.length === 0) {
+    redirect(`${back}?error=${encodeURIComponent("Esa rutina no tiene ejercicios")}`);
+  }
+
+  const { data: routine, error: routineError } = await supabase
+    .from("routines")
+    .insert({ athlete_id: athleteId, nombre: template.nombre })
+    .select("id")
+    .single();
+  if (routineError) redirect(`${back}?error=${encodeURIComponent(routineError.message)}`);
+
+  const rows = templateExercises.map((te) => ({ routine_id: routine.id, ...te }));
+  const { error: insertError } = await supabase.from("routine_exercises").insert(rows);
+  if (insertError) {
+    await supabase.from("routines").delete().eq("id", routine.id);
+    redirect(`${back}?error=${encodeURIComponent(insertError.message)}`);
+  }
+
+  revalidatePath(back);
+  redirect(back);
+}
+
+// Rutina armada a mano para un atleta puntual, sin pasar por plantilla.
+export async function assignCustomRoutine(athleteId: string, formData: FormData) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const back = `/dashboard/athletes/${athleteId}`;
   const nombre = String(formData.get("nombre") ?? "").trim();
-  const lineasRaw = String(formData.get("ejercicios") ?? "");
+  const parsed = parseItems(String(formData.get("items") ?? ""));
 
-  const lineas = lineasRaw
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  if (!nombre || lineas.length === 0) {
-    redirect(`/dashboard/athletes/${athleteId}?error=${encodeURIComponent("Falta el nombre o los ejercicios")}`);
-  }
-
-  // Mismo formato que /nuevarutina en el bot: "Ejercicio SERIESxREPS", ej.
-  // "Press banca 4x8". Se reimplementa acá en vez de compartir código con
-  // las Edge Functions Deno — ver nota de reuso en el plan del panel.
-  const LINE_RE = /^(.+?)\s+(\d+)\s*x\s*(amrap|\d+)$/i;
-
-  type Parsed = { exerciseText: string; series_obj: number; reps_min: number; reps_max: number | null };
-  const parsed: Parsed[] = [];
-  const noEncontrados: string[] = [];
-
-  for (const linea of lineas) {
-    const match = linea.match(LINE_RE);
-    if (!match) {
-      redirect(
-        `/dashboard/athletes/${athleteId}?error=${encodeURIComponent(`No entendí esta línea: "${linea}". Formato: "Press banca 4x8"`)}`,
-      );
-    }
-    const [, exerciseText, seriesRaw, repsRaw] = match!;
-    const isAmrap = repsRaw.toLowerCase() === "amrap";
-    parsed.push({
-      exerciseText: exerciseText.trim(),
-      series_obj: parseInt(seriesRaw, 10),
-      reps_min: isAmrap ? 1 : parseInt(repsRaw, 10),
-      reps_max: isAmrap ? null : parseInt(repsRaw, 10),
-    });
-  }
-
-  const { data: athlete } = await supabase.from("athletes").select("coach_id").eq("id", athleteId).maybeSingle();
-  if (!athlete) redirect("/dashboard");
-
-  const { data: exercisesData } = await supabase
-    .from("exercises")
-    .select("id, nombre_canonico")
-    .or(`es_global.eq.true,coach_id.eq.${athlete.coach_id}`);
-
-  const normalize = (s: string) =>
-    s
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .toLowerCase()
-      .trim();
-
-  const byName = new Map((exercisesData ?? []).map((e) => [normalize(e.nombre_canonico), e.id as string]));
-
-  const items = parsed.map((p) => {
-    const exerciseId = byName.get(normalize(p.exerciseText));
-    if (!exerciseId) noEncontrados.push(p.exerciseText);
-    return { ...p, exerciseId };
-  });
-
-  if (noEncontrados.length > 0) {
-    redirect(
-      `/dashboard/athletes/${athleteId}?error=${encodeURIComponent(`No reconozco: ${noEncontrados.join(", ")}`)}`,
-    );
-  }
+  if (!nombre) redirect(`${back}?error=${encodeURIComponent("Falta el nombre de la rutina")}`);
+  if ("error" in parsed) redirect(`${back}?error=${encodeURIComponent(parsed.error)}`);
 
   const { data: routine, error: routineError } = await supabase
     .from("routines")
     .insert({ athlete_id: athleteId, nombre })
     .select("id")
     .single();
-  if (routineError) {
-    redirect(`/dashboard/athletes/${athleteId}?error=${encodeURIComponent(routineError.message)}`);
-  }
+  if (routineError) redirect(`${back}?error=${encodeURIComponent(routineError.message)}`);
 
-  const rows = items.map((it, i) => ({
-    routine_id: routine.id,
-    exercise_id: it.exerciseId,
-    orden: i + 1,
-    series_obj: it.series_obj,
-    reps_min: it.reps_min,
-    reps_max: it.reps_max,
-  }));
+  const rows = parsed.items.map((it, i) => ({ routine_id: routine.id, orden: i + 1, ...it }));
   const { error: insertError } = await supabase.from("routine_exercises").insert(rows);
   if (insertError) {
-    redirect(`/dashboard/athletes/${athleteId}?error=${encodeURIComponent(insertError.message)}`);
+    await supabase.from("routines").delete().eq("id", routine.id);
+    redirect(`${back}?error=${encodeURIComponent(insertError.message)}`);
   }
 
-  redirect(`/dashboard/athletes/${athleteId}`);
+  revalidatePath(back);
+  redirect(back);
+}
+
+export async function deleteRoutine(athleteId: string, routineId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const back = `/dashboard/athletes/${athleteId}`;
+
+  // Los workouts ya registrados referencian routine_id, así que borrar la
+  // rutina se los llevaría puesto (o fallaría por FK). En vez de eso se
+  // desactiva: desaparece del portal del atleta y el historial queda intacto.
+  const { error } = await supabase.from("routines").update({ activa: false }).eq("id", routineId);
+  if (error) redirect(`${back}?error=${encodeURIComponent(error.message)}`);
+
+  revalidatePath(back);
+  redirect(back);
 }

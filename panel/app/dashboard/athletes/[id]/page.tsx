@@ -1,13 +1,23 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { assignRoutine, generateAthleteAccess } from "../actions";
+import RoutineBuilder from "../../routines/RoutineBuilder";
+import {
+  assignCustomRoutine,
+  assignFromTemplate,
+  deleteRoutine,
+  generateAthleteAccess,
+} from "../actions";
 
 interface RoutineExerciseRow {
   orden: number;
   series_obj: number;
   reps_min: number;
   reps_max: number | null;
+  rpe_obj: number | null;
+  descanso_seg: number | null;
+  notas: string | null;
   exercises: { nombre_canonico: string } | { nombre_canonico: string }[] | null;
 }
 
@@ -62,10 +72,18 @@ export default async function AthleteDetailPage({
   const { data: routineExercises } = routineIds.length
     ? await supabase
         .from("routine_exercises")
-        .select("routine_id, orden, series_obj, reps_min, reps_max, exercises(nombre_canonico)")
+        .select("routine_id, orden, series_obj, reps_min, reps_max, rpe_obj, descanso_seg, notas, exercises(nombre_canonico)")
         .in("routine_id", routineIds)
         .order("orden", { ascending: true })
     : { data: [] as (RoutineExerciseRow & { routine_id: string })[] };
+
+  const [{ data: templates }, { data: exercises }] = await Promise.all([
+    supabase.from("routine_templates").select("id, nombre").order("nombre", { ascending: true }),
+    supabase
+      .from("exercises")
+      .select("id, nombre_canonico, grupo_muscular, tipo")
+      .order("nombre_canonico", { ascending: true }),
+  ]);
 
   const { data: workouts } = await supabase
     .from("workouts")
@@ -101,7 +119,6 @@ export default async function AthleteDetailPage({
     prs.push({ exerciseName: ex?.nombre_canonico ?? "—", pesoMax: row.peso as number, reps: row.reps, fecha: row.created_at });
   }
 
-  const boundAssignRoutine = assignRoutine.bind(null, id);
 
   return (
     <div className="flex flex-col gap-8">
@@ -161,12 +178,22 @@ export default async function AthleteDetailPage({
       <section className="glass rounded-3xl p-7 sm:p-8">
         <h2 className="mb-5 text-lg font-semibold tracking-tight">Rutinas activas</h2>
         {!routines || routines.length === 0 ? (
-          <p className="mb-4 text-sm text-muted">Todavía no tiene ninguna rutina asignada.</p>
+          <p className="mb-6 text-sm text-muted">Todavía no tiene ninguna rutina asignada.</p>
         ) : (
           <div className="mb-6 flex flex-col gap-4">
             {routines.map((r) => (
               <div key={r.id} className="glass-input rounded-2xl px-4 py-3.5">
-                <p className="mb-1.5 text-[15px] font-medium">{r.nombre}</p>
+                <div className="mb-1.5 flex items-start justify-between gap-3">
+                  <p className="text-[15px] font-medium">{r.nombre}</p>
+                  <form action={deleteRoutine.bind(null, id, r.id)}>
+                    <button
+                      type="submit"
+                      className="shrink-0 text-xs text-muted underline underline-offset-4 transition-colors hover:text-red-400"
+                    >
+                      Quitar
+                    </button>
+                  </form>
+                </div>
                 <ul className="text-sm text-muted">
                   {(routineExercises ?? [])
                     .filter((re) => re.routine_id === r.id)
@@ -174,6 +201,9 @@ export default async function AthleteDetailPage({
                       <li key={`${re.routine_id}-${re.orden}`}>
                         {re.orden}. {exerciseName(re)} — {re.series_obj}x
                         {re.reps_max === null ? "AMRAP" : re.reps_min === re.reps_max ? re.reps_min : `${re.reps_min}-${re.reps_max}`}
+                        {re.descanso_seg !== null && ` · ${re.descanso_seg}s`}
+                        {re.rpe_obj !== null && ` · RPE ${re.rpe_obj}`}
+                        {re.notas && <span className="block pl-4 italic">{re.notas}</span>}
                       </li>
                     ))}
                 </ul>
@@ -182,30 +212,58 @@ export default async function AthleteDetailPage({
           </div>
         )}
 
+        {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
+
+        {templates && templates.length > 0 && (
+          <details className="mb-3">
+            <summary className="cursor-pointer text-sm font-medium text-muted transition-colors hover:text-foreground">
+              Asignar una de tus rutinas
+            </summary>
+            <form action={assignFromTemplate.bind(null, id)} className="mt-4 flex flex-wrap gap-3">
+              <select
+                name="template_id"
+                required
+                defaultValue=""
+                className="glass-input min-w-48 flex-1 rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none"
+              >
+                <option value="" disabled>
+                  Elegí una rutina
+                </option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombre}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="btn-primary rounded-2xl px-5 py-3 text-[15px] font-semibold">
+                Asignar
+              </button>
+            </form>
+          </details>
+        )}
+
         <details>
           <summary className="cursor-pointer text-sm font-medium text-muted transition-colors hover:text-foreground">
-            Asignar rutina nueva
+            Armar una rutina solo para este atleta
           </summary>
-          <form action={boundAssignRoutine} className="mt-4 flex flex-col gap-4">
-            <input
-              name="nombre"
-              required
-              placeholder="Nombre de la rutina (ej: Push A)"
-              className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
+          <div className="mt-4">
+            <RoutineBuilder
+              exercises={exercises ?? []}
+              action={assignCustomRoutine.bind(null, id)}
+              submitLabel="Asignar rutina"
             />
-            <textarea
-              name="ejercicios"
-              required
-              rows={5}
-              placeholder={"Una línea por ejercicio, ej:\nPress banca 4x8\nRemo con barra 4x8\nDominadas 3xAMRAP"}
-              className="glass-input rounded-2xl px-4 py-3 font-mono text-sm text-foreground outline-none placeholder:text-muted"
-            />
-            {error && <p className="text-sm text-red-400">{error}</p>}
-            <button type="submit" className="btn-primary self-start rounded-2xl px-4 py-3 text-[15px] font-semibold">
-              Guardar rutina
-            </button>
-          </form>
+          </div>
         </details>
+
+        {(!templates || templates.length === 0) && (
+          <p className="mt-4 text-sm text-muted">
+            Si vas a repetir esta rutina con otros atletas, armala en{" "}
+            <Link href="/dashboard/routines" className="underline underline-offset-4">
+              Rutinas
+            </Link>{" "}
+            y asignala desde acá.
+          </p>
+        )}
       </section>
 
       <section className="glass rounded-3xl p-7 sm:p-8">

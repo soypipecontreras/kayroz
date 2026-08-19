@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createExercise } from "./actions";
@@ -27,7 +28,7 @@ export default async function ExercisesPage({
 
   const { data: exercises } = await supabase
     .from("exercises")
-    .select("id, nombre_canonico, grupo_muscular, tipo, es_global")
+    .select("id, nombre_canonico, grupo_muscular, tipo, es_global, imagen_path, video_path")
     .order("es_global", { ascending: false })
     .order("nombre_canonico", { ascending: true });
 
@@ -110,19 +111,31 @@ export default async function ExercisesPage({
 function ExerciseList({
   exercises,
 }: {
-  exercises: { id: string; nombre_canonico: string; grupo_muscular: string; tipo: string }[];
+  exercises: {
+    id: string;
+    nombre_canonico: string;
+    grupo_muscular: string;
+    tipo: string;
+    imagen_path?: string | null;
+    video_path?: string | null;
+  }[];
 }) {
   return (
     <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {exercises.map((e) => (
-        <li
-          key={e.id}
-          className="glass-input flex items-center justify-between rounded-2xl px-4 py-3 text-[15px] transition-colors hover:border-white/25"
-        >
-          <span>{e.nombre_canonico}</span>
-          <span className="text-xs text-muted">
-            {e.grupo_muscular} · {e.tipo}
-          </span>
+        <li key={e.id}>
+          <Link
+            href={`/dashboard/exercises/${e.id}`}
+            className="glass-input flex items-center justify-between rounded-2xl px-4 py-3 text-[15px] transition-colors hover:border-white/25"
+          >
+            <span>
+              {e.nombre_canonico}
+              {e.video_path && <span className="ml-2 text-xs text-muted">▶</span>}
+            </span>
+            <span className="text-xs text-muted">
+              {e.grupo_muscular} · {e.tipo}
+            </span>
+          </Link>
         </li>
       ))}
     </ul>

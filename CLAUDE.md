@@ -104,9 +104,45 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
   ("entrenó ayer · 3 entrenos en los últimos 30 días"). Todo con números/texto, sin librería de
   gráficos todavía. Probado en el navegador con tres atletas de prueba (reciente/perdido/
   nunca entrenó) contra la base real, después borrado.
-- ❌ Todo lo de rutinas normalizadas (`routine_versions`/`routine_days`), `assignments`,
-  progresión automática, sesión guiada, cron/reportes, cobros, gráficos de progreso en el
-  panel: **solo diseño**, cero código. Ver §9 para el orden de construcción.
+- ✅ **Rutinas reusables + media (Fase C)**: `routine_templates` / `routine_template_exercises`
+  son la rutina del **coach** (armada una vez, asignable a muchos atletas); `routines` sigue
+  siendo la copia asignada a un atleta. Se **copia, no se referencia**: editar la plantilla no
+  altera retroactivamente lo que un atleta ya venía entrenando. Esto salda la deuda anotada en
+  §3 (antes una rutina colgaba de un `athlete_id` y había que recargarla por atleta) y es lo
+  que hace viable una cadena de gimnasios, no solo un entrenador suelto.
+  Constructor visual en `panel/app/dashboard/routines/RoutineBuilder.tsx` (buscador sobre el
+  catálogo, reordenar, series/reps/descanso/RPE/notas/AMRAP por ejercicio) — reemplaza el
+  `<textarea>` de "Press banca 4x8" que había antes. `rpe_obj`, `descanso_seg` y `notas` ya
+  existían en el esquema desde siempre pero **ninguna UI los exponía**; ahora sí, y el portal
+  del atleta los muestra.
+  **Dos buckets de media, a propósito**: `exercise-media` es PÚBLICO y tiene el catálogo global
+  de la plataforma (los 45 ejercicios sembrados ya traen imagen — ojo, §0 decía que no había
+  ninguna y estaba desactualizado); `coach-media` es PRIVADO, 50 MB máx, con lista blanca de
+  MIME, y guarda lo que sube cada coach (puede ser un video para un cliente puntual). Se sirve
+  con URL firmada a 1 h (`panel/lib/media.ts`), nunca pública. Convención de rutas
+  `{coach_id}/{uuid}.{ext}`: el primer segmento **es** la frontera del tenant, las policies de
+  `storage.objects` comparan contra eso — si cambia el formato de ruta hay que cambiar la
+  migración. La media de la rutina pisa a la del ejercicio, y la imagen pública del catálogo es
+  el último recurso. El archivo sube directo del navegador al Storage, no por el Server Action
+  (50 MB por el server de Next chocan con `bodySizeLimit`).
+  Verificado por SQL simulando roles: el coach dueño ve y edita lo suyo; su atleta ve la media
+  y los ejercicios del coach pero **no** puede editarlos ni ver las plantillas; un tercero no ve
+  nada; y ningún coach puede editar el catálogo global.
+- ⚠️ **Trampa de RLS que ya mordió dos veces** (`athletes` y `exercises`): un `UPDATE` que
+  ninguna policy habilita **no devuelve error** — PostgREST responde 200 y no toca ninguna
+  fila. Al agregar media esto dejó el archivo subido al bucket y la fila sin `imagen_path`, en
+  silencio. Dos consecuencias permanentes: (1) al agregar una tabla o una operación nueva al
+  panel, revisar que exista la policy `_by_coach_auth` para **ese comando** (las de
+  `app.current_coach_id()` son del bot y el panel nunca las satisface); (2) los `update` del
+  panel llevan `.select()` y chequean que haya vuelto al menos una fila, para que un agujero
+  así falle ruidosamente en vez de en silencio.
+- ❌ Todo lo de `routine_versions`/`routine_days`, `assignments`, progresión automática, sesión
+  guiada, cron/reportes, cobros, gráficos de progreso en el panel: **solo diseño**, cero
+  código. Ver §9 para el orden de construcción.
+- ❌ **Multi-entrenador bajo una misma marca**: hoy el modelo es un coach = un tenant. Una
+  cadena con varios entrenadores compartiendo catálogo, plantillas y atletas necesitaría una
+  entidad `organizations` por encima de `coaches` y roles (dueño/entrenador/recepción). No está
+  construido y no es un detalle — es una migración de fondo. Ver §11.
 
 ---
 
@@ -200,22 +236,35 @@ athletes                 -- ✅ implementado (antes "users", single-tenant)
 
 exercises                -- ✅ implementado
   id uuid pk
-  coach_id uuid null        -- null = catálogo global compartido (~90 ejercicios sembrados)
+  coach_id uuid null        -- null = catálogo global compartido (45 ejercicios sembrados)
   nombre_canonico text
   grupo_muscular text
   tipo text
   instrucciones text null
-  imagen_url text null      -- bucket exercise-media, aún sin imágenes cargadas
+  imagen_url text null      -- URL PÚBLICA (bucket exercise-media). Los 45 globales
+                             -- ya la tienen cargada: 5 dibujos por ejercicio y el
+                             -- resto un ícono genérico según `tipo`.
+  imagen_path text null     -- ruta en el bucket PRIVADO coach-media (sube el coach)
+  video_path text null      -- idem, video de técnica. Pisan a imagen_url.
   -- alias en tabla separada `exercise_aliases`, no como array — ya funciona así,
   -- no hay razón para cambiarlo.
 
+routine_templates / routine_template_exercises   -- ✅ implementado (Fase C)
+  -- La rutina del COACH, reusable. routine_template_exercises tiene el mismo
+  -- shape que routine_exercises (series_obj, reps_min/max, rpe_obj,
+  -- descanso_seg, notas) más imagen_path/video_path.
+  -- Asignar = COPIAR estas filas a routines/routine_exercises. Editar la
+  -- plantilla NO toca lo ya asignado, a propósito.
+
 routines / routine_exercises / routine_cycles / routine_drafts   -- ✅ implementado,
-  -- todavía con el shape single-tenant (por-atleta, versionado simple vía
-  -- routine_group_id). NO se migró al modelo routine_versions/routine_days/
-  -- assignments de una fase anterior de este documento — se decidió mantener
-  -- lo que ya funcionaba en vez de rediseñarlo en la misma migración que
-  -- multi-tenancy. Repensar cuando un coach necesite reusar una rutina entre
-  -- varios atletas sin duplicarla.
+  -- `routines` es la copia asignada a UN atleta (sigue colgando de athlete_id).
+  -- routine_exercises suma imagen_path/video_path para pisar la media del
+  -- ejercicio en esta rutina puntual.
+  -- Sigue sin migrarse al modelo routine_versions/routine_days/assignments de
+  -- una fase anterior de este documento — con plantillas + copia ya se cubre
+  -- el caso que motivaba ese rediseño (reusar una rutina entre atletas).
+  -- Borrar una rutina asignada = `activa = false`, no DELETE: los workouts ya
+  -- registrados la referencian y el historial no se toca.
 
 workouts / sets / session_progress   -- ✅ implementado, shape sin cambios,
   -- solo user_id -> athlete_id.
@@ -423,6 +472,29 @@ espera mi visto bueno antes de seguir.
 - ❌ Fuera de este tramo: gráficos de progreso, ficha de atleta con series por semana,
   filtros/orden en la tabla de atletas — quedan para si hace falta, no se construyen sin pedido.
 
+**Panel web — rutinas reusables + media (Fase C)**
+- ✅ Migraciones `20260820000000_routine_templates.sql` (tablas de plantilla, `auth_coach_id()`,
+  columnas de media, update/delete de `routines` por el coach),
+  `20260820000100_coach_media_storage.sql` (bucket privado + policies) y
+  `20260820000200_exercises_update_by_coach.sql` (la policy que faltaba, ver §0).
+- ✅ `/dashboard/routines`: listar, crear, editar y eliminar rutinas del coach.
+  `RoutineBuilder` es un componente cliente compartido entre plantillas y la asignación
+  directa a un atleta; la validación del JSON que manda vive en `lib/routineItems.ts`
+  (no puede ir en un `actions.ts` porque un módulo `"use server"` solo exporta async).
+- ✅ Ficha de atleta: asignar desde plantilla (copia), armar una rutina solo para ese atleta,
+  y quitar una asignada. Muestra descanso, RPE y notas.
+- ✅ `/dashboard/exercises/[id]`: subir/quitar foto y video de un ejercicio propio. Los del
+  catálogo global no se pueden editar (y el `with check` de la policy lo impide de verdad,
+  no solo la UI).
+- ✅ Portal del atleta (`/app`): miniatura, descanso, RPE, nota y video plegable
+  (`preload="none"`, si no el navegador se baja todos los videos de la rutina al abrir).
+- ✅ Verificado en el navegador (crear rutina, buscador, AMRAP, editar, subir imagen) y por SQL
+  simulando los tres roles. Dos bugs reales encontrados y corregidos en el camino: el campo de
+  reps dejaba `reps_max` viejo (guardaba "8-10" al escribir 8) y faltaba la policy de UPDATE.
+- ❌ Fuera de esta fase: override de media por rutina desde la UI (las columnas existen y el
+  portal ya las prioriza, falta el botón), reordenar por drag & drop, duplicar plantilla,
+  `dia_semana` (la columna existe, sigue sin usarse).
+
 **Fase 2 — Catálogo + parser:** ✅ ya estaba (seed de 45 ejercicios, `_shared/parser.ts` con
 27 tests). No se reconstruye acá, ver §4.
 
@@ -472,6 +544,17 @@ No construyas nada de esto aunque parezca buena idea:
 - Chat directo atleta ↔ coach dentro del bot.
 - Wearables o integraciones con Strava/Apple Health.
 - Gamificación social entre atletas.
+
+**Cadenas de gimnasios (varios entrenadores bajo una marca):** el producto apunta tanto a un
+entrenador personal suelto como a un gimnasio con varios entrenadores. Hoy el modelo cubre bien
+el primer caso y a medias el segundo: las plantillas de rutina (§9, Fase C) ya evitan recargar
+la misma rutina por atleta, que era el cuello de botella real al escalar. Lo que **no** existe
+es una entidad por encima de `coaches`: hoy un coach es el tenant, así que dos entrenadores del
+mismo gimnasio son dos cuentas aisladas que no comparten catálogo, plantillas ni atletas, y no
+hay roles (dueño / entrenador / recepción) ni un lugar donde ver el gimnasio entero. Construirlo
+es una migración de fondo (`organizations`, `coach_id` → `org_id` en varias tablas, RLS nueva en
+todas), no un agregado incremental — no arrancarlo sin confirmar el plan y sin saber si hay un
+cliente real de ese tamaño esperando.
 
 **App móvil nativa (iOS/Android):** decidida (no es una opción abierta) pero diferida a una
 fase aparte — se eligió explícitamente por sobre PWA/responsive-only. Mientras tanto el panel
