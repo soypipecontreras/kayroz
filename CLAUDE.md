@@ -24,6 +24,14 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
   pantallas de login/signup/onboarding); el campo `coaches.marca` de cada coach sigue siendo
   su propio white-label, visible como título principal del dashboard una vez logueado — no se
   reemplaza, son dos identidades que conviven a propósito.
+- ✅ **Estética "liquid glass"** en todo el panel (`panel/app/globals.css`, clases `.glass`,
+  `.glass-input`, `.glass-nav`): paneles translúcidos con `backdrop-filter: blur()`, borde
+  sutil e inset-highlight para simular el filo de un vidrio real. Necesita un fondo con algo
+  de textura detrás para que el blur tenga qué refractar — por eso `body` tiene resplandores
+  radiales fijos (`background-attachment: fixed`) en vez de negro plano. Los botones primarios
+  (CTA) se dejaron sólidos (blanco, sin vidrio) a propósito — el vidrio en el elemento de
+  acción principal reduce contraste/afordancia. Nav del dashboard: `sticky` + `.glass-nav`,
+  flota al hacer scroll. Verificado en el navegador en las 8 pantallas del panel.
 - ✅ Esquema SQL de `coaches`, `athletes`, `invite_codes` + RLS, ya **aplicado al proyecto
   Supabase real** (`bnjjmnhyuiusrqhxzwoj`), no solo en el archivo de migración
   (`supabase/migrations/20260815000000_multi_tenant.sql`). Verificado con `get_advisors`
