@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 // Alta manual: no pasa por código de invitación ni WhatsApp (todavía no hay
@@ -45,6 +46,34 @@ export async function createAthlete(formData: FormData) {
   }
 
   redirect(`/dashboard/athletes/${athlete.id}`);
+}
+
+// Mismo patrón que generateInviteCode en app/dashboard/actions.ts. El token
+// es un uuid (no un código corto tipo invite_codes) porque va en un link, no
+// se dicta ni se tipea a mano.
+export async function generateAthleteAccess(athleteId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: athlete } = await supabase.from("athletes").select("id").eq("id", athleteId).maybeSingle();
+  if (!athlete) redirect("/dashboard");
+
+  const token = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { error } = await supabase
+    .from("athletes")
+    .update({ activation_token: token, activation_expires_at: expiresAt })
+    .eq("id", athleteId);
+  if (error) {
+    redirect(`/dashboard/athletes/${athleteId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/dashboard/athletes/${athleteId}`);
 }
 
 export async function assignRoutine(athleteId: string, formData: FormData) {

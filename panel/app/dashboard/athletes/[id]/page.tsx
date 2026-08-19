@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { assignRoutine } from "../actions";
+import { assignRoutine, generateAthleteAccess } from "../actions";
 
 interface RoutineExerciseRow {
   orden: number;
@@ -28,10 +29,14 @@ export default async function AthleteDetailPage({
 
   const { data: athlete } = await supabase
     .from("athletes")
-    .select("id, nombre, telefono, estado, unidad_peso, ultima_sesion_en")
+    .select("id, nombre, telefono, estado, unidad_peso, ultima_sesion_en, auth_user_id, activation_token, activation_expires_at")
     .eq("id", id)
     .maybeSingle();
   if (!athlete) notFound();
+
+  const host = (await headers()).get("host");
+  const origin = host?.startsWith("localhost") ? `http://${host}` : `https://${host}`;
+  const activationExpired = athlete.activation_expires_at ? new Date(athlete.activation_expires_at) < new Date() : true;
 
   const { data: routines } = await supabase
     .from("routines")
@@ -67,6 +72,29 @@ export default async function AthleteDetailPage({
           <span className="capitalize">{athlete.estado}</span>
         </p>
       </div>
+
+      <section className="glass rounded-3xl p-7 sm:p-8">
+        <h2 className="mb-5 text-lg font-semibold tracking-tight">Acceso al portal</h2>
+        {athlete.auth_user_id ? (
+          <p className="text-sm text-muted">Cuenta activa — ya puede entrar a su portal.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {athlete.activation_token && !activationExpired ? (
+              <div className="glass-input rounded-2xl px-4 py-3.5 text-sm">
+                <p className="mb-1 text-muted">Compartile este link para que active su cuenta:</p>
+                <p className="break-all font-mono text-[13px]">{`${origin}/join/${athlete.activation_token}`}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted">Todavía no tiene acceso al portal.</p>
+            )}
+            <form action={generateAthleteAccess.bind(null, id)}>
+              <button type="submit" className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold">
+                {athlete.activation_token ? "Generar link nuevo" : "Generar acceso"}
+              </button>
+            </form>
+          </div>
+        )}
+      </section>
 
       <section className="glass rounded-3xl p-7 sm:p-8">
         <h2 className="mb-5 text-lg font-semibold tracking-tight">Rutinas activas</h2>

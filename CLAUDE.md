@@ -68,9 +68,37 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
   ficha de atleta con rutinas asignadas e historial de entrenos, y configuración del coach.
   Todo probado de punta a punta en el navegador contra la base real. Ver §9 para el detalle
   slice por slice.
+- ✅ **Cuentas de atleta + portal propio** (`panel/app/app/*`, `panel/app/join/[token]/*`):
+  mismo puente `auth_user_id` que los coaches, ahora también en `athletes`. El coach genera un
+  link de activación desde la ficha del atleta ("Generar acceso" → `activation_token` +
+  `activation_expires_at`, 7 días de validez); el atleta abre `/join/<token>`, pone su
+  contraseña, y queda vinculado (`activate_athlete`, función `security definer` — el atleta no
+  tiene forma de activar la cuenta de otro porque usa `auth.uid()` del caller, nunca un id por
+  parámetro). Portal en `/app/*`: rutina asignada (`/app`), carga manual de series
+  (`/app/log`), historial (`/app/historial`) y PRs (`/app/prs`) — reimplementa en TS la misma
+  lógica de `_shared/{workouts,pr}.ts` (crear/reusar workout `en_curso`, marcar `es_pr` en
+  cadena). `login` ahora resuelve a `/dashboard` o `/app` según si el `auth.uid()` tiene fila
+  en `coaches` o en `athletes`. PWA básica (`panel/public/manifest.json` + íconos compuestos
+  sobre fondo negro) para "agregar a inicio" en el celular — no hay app nativa todavía, ver
+  §11. Probado de punta a punta en el navegador (alta → generar acceso → activar → cargar
+  serie → el coach ve el entreno real) y por SQL con `set role authenticated` +
+  `request.jwt.claims` simulando un uid ajeno (ve cero filas) y el uid real del coach (ve el
+  entreno del atleta) — después borrado.
+  **Cuidado si tocás RLS de `coaches`/`athletes`:** una policy en `coaches` que subconsulta
+  `athletes`, combinada con la policy ya existente en `athletes` que subconsulta `coaches`
+  (`athletes_select_by_coach_auth`), produce "infinite recursion detected in policy" — pasó al
+  agregar `coaches_select_by_athlete_auth` (así el atleta puede leer la `marca` de su coach en
+  el header). Se resolvió con una función `security definer` (`auth_athlete_coach_id()`) que
+  hace el lookup sin volver a disparar RLS — mismo patrón a seguir si aparece otro ciclo
+  parecido. Ojo también: `revoke ... from public` en una función nueva **no** alcanza a los
+  grants directos que Supabase hace por default privileges a `anon`/`authenticated` al crear
+  la función — hay que revocar explícito de `anon` cuando la función no debería ser pública
+  (`select grantee from information_schema.routine_privileges where routine_name = '...'`
+  para verificar).
 - ❌ Todo lo de rutinas normalizadas (`routine_versions`/`routine_days`), `assignments`,
-  progresión automática, sesión guiada, cron/reportes, cobros, adherencia en el panel: **solo
-  diseño**, cero código. Ver §9 para el orden de construcción.
+  progresión automática, sesión guiada, cron/reportes, cobros, dashboard de adherencia del
+  coach con métricas reales: **solo diseño**, cero código. Ver §9 para el orden de
+  construcción.
 
 ---
 
@@ -151,7 +179,11 @@ athletes                 -- ✅ implementado (antes "users", single-tenant)
   nombre text
   unidad_peso text default 'kg'   -- 'kg' | 'lb'
   estado text default 'activo'    -- 'activo' | 'pausado' | 'archivado'
-  ultima_sesion_en timestamptz null
+  ultima_sesion_en timestamptz null  -- ✅ ahora sí se escribe: se actualiza al
+                                      -- cargar una serie desde el portal (/app/log)
+  auth_user_id uuid null unique fk -> auth.users(id)  -- null hasta que activa su cuenta
+  activation_token uuid null unique      -- generado por el coach, un solo uso
+  activation_expires_at timestamptz null -- 7 días desde que se generó
   created_at timestamptz
   unique (coach_id, telefono)
   -- índice único parcial: un solo atleta con estado='activo' por teléfono,
@@ -349,6 +381,28 @@ espera mi visto bueno antes de seguir.
 - ❌ Fuera de este slice: adherencia/analytics, edición o borrado de rutinas ya asignadas,
   cobros/enforcement de plan, logo, invitar coaches adicionales a la misma marca.
 
+**Panel web — cuentas de atleta + portal propio (Fase A del "trabajo grande")**
+- ✅ Migración `supabase/migrations/20260819000000_athlete_auth.sql` (+ 4 migraciones chicas
+  de corrección el mismo día, ver §0 para el detalle de la recursión de RLS y los grants a
+  `anon`): puente `athletes.auth_user_id`, `activation_token`/`activation_expires_at`,
+  policies de select/insert/update para que el atleta lea y escriba sus propios `workouts`/
+  `sets` y lea sus `routines`/`routine_exercises`/`exercises`/`coaches` (marca de su coach).
+- ✅ "Generar acceso" en la ficha de atleta (`app/dashboard/athletes/actions.ts`,
+  `generateAthleteAccess`) — mismo patrón que `generateInviteCode`.
+- ✅ Activación pública `/join/[token]` (`app/join/[token]/`): valida el token vía
+  `get_athlete_activation` (RPC pública, solo devuelve nombre/marca/vigencia, no permite
+  listar atletas pendientes), el atleta pone contraseña y activa vía `activate_athlete` (RPC
+  `security definer`, solo para `authenticated`, usa `auth.uid()` del caller).
+- ✅ Portal del atleta `/app/*` (`app/app/`): rutina asignada, cargar serie, historial, PRs.
+  Login (`app/login/page.tsx`) resuelve coach vs. atleta después de autenticar.
+- ✅ PWA básica: `panel/public/manifest.json`, íconos en `panel/public/icons/` (isotipo
+  compuesto sobre negro sólido — el original es blanco sobre transparente, no sirve solo
+  como ícono de app), metadata de `apple-mobile-web-app` en `app/layout.tsx`.
+- ✅ Probado de punta a punta en el navegador contra la base real (ver §0), después borrado.
+- ❌ Fuera de esta fase: dashboard de adherencia del coach con métricas agregadas, ficha de
+  atleta más rica (gráficos de progreso), app nativa — quedan para las fases siguientes del
+  "trabajo grande" (dashboard de seguimiento real, luego app nativa aparte).
+
 **Fase 2 — Catálogo + parser:** ✅ ya estaba (seed de 45 ejercicios, `_shared/parser.ts` con
 27 tests). No se reconstruye acá, ver §4.
 
@@ -399,11 +453,13 @@ No construyas nada de esto aunque parezca buena idea:
 - Wearables o integraciones con Strava/Apple Health.
 - Gamificación social entre atletas.
 
-**App móvil nativa (iOS/Android):** diferida, no descartada de plano. El panel web (`panel/`,
-ver §9) cubre "verlo materializado desde el celular" vía navegador por ahora. Si en algún
-momento se decide construir una app nativa de verdad, es una decisión de arquitectura nueva
-(stack distinto, publicación en tiendas) — no asumas que ya está aprobada solo porque dejó de
-estar en esta lista de exclusiones.
+**App móvil nativa (iOS/Android):** decidida (no es una opción abierta) pero diferida a una
+fase aparte — se eligió explícitamente por sobre PWA/responsive-only. Mientras tanto el panel
+web (`panel/`, ver §9) cubre el uso desde el celular vía navegador, con PWA básica
+("agregar a inicio", ver §0/§9) como paso intermedio razonable. Cuando le llegue el turno a la
+app nativa es una decisión de arquitectura nueva (stack distinto — probablemente React Native
+o Expo dado que el resto es TS, cuentas de developer, publicación en tiendas) — no asumas el
+stack ni arranques código sin confirmar el plan primero.
 
 ---
 

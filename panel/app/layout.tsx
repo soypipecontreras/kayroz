@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -14,8 +14,22 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Kayroz — Panel del coach",
-  description: "Kayroz: la plataforma para que los entrenadores personales lleven a sus atletas por WhatsApp.",
+  title: "Kayroz",
+  description: "Kayroz: la plataforma para que entrenadores personales y sus atletas lleven el entrenamiento en un solo lugar.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Kayroz",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({

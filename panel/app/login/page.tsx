@@ -19,15 +19,28 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    setLoading(false);
-    if (error) {
+    if (error || !data.user) {
+      setLoading(false);
       setError("Email o contraseña incorrectos.");
       return;
     }
 
-    router.push("/dashboard");
+    // Un mismo login sirve para coach y atleta — se resuelve acá a qué panel
+    // corresponde cada uno (mismo concepto que resolveIdentity del bot).
+    const { data: coach } = await supabase
+      .from("coaches")
+      .select("id")
+      .eq("auth_user_id", data.user.id)
+      .maybeSingle();
+
+    setLoading(false);
+    if (coach) {
+      router.push("/dashboard");
+    } else {
+      router.push("/app");
+    }
     router.refresh();
   }
 
