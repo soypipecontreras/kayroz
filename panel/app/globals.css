@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Identidad Kayroz: negro/blanco, filosa, sin modo claro — el logo (ver
+   public/brand/) está pensado para fondo negro, no es un tema que se adapte
+   a prefers-color-scheme como el resto de una app genérica. */
+:root {
+  /* Negro puro: los PNG del logo (public/brand/) traen fondo #000000
+     horneado — cualquier otro tono deja un rectángulo visible alrededor. */
+  --background: #000000;
+  --surface: #111111;
+  --border: #262626;
+  --foreground: #f5f5f5;
+  --muted: #8a8a8a;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

@@ -1,0 +1,7 @@
+.DS_Store
+
+# Supabase CLI local link/metadata — específico de esta máquina, no portable.
+supabase/.temp/
+
+# Config local de Claude Code — permisos/allowlist por desarrollador.
+.claude/settings.local.json
