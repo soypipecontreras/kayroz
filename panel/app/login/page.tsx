@@ -45,7 +45,7 @@ export default function LoginPage() {
       </div>
 
       <div className="glass relative z-10 w-full max-w-md rounded-[28px] p-10 sm:p-12">
-        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={84} priority className="mb-10" />
+        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={95} priority className="mb-10" />
         <h1 className="mb-2 text-2xl font-semibold tracking-tight">Bienvenido de nuevo</h1>
         <p className="mb-8 text-sm text-muted">Entrá con tu cuenta de coach.</p>
 

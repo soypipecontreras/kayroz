@@ -53,7 +53,7 @@ export default function SignupPage() {
       </div>
 
       <div className="glass relative z-10 w-full max-w-md rounded-[28px] p-10 sm:p-12">
-        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={84} priority className="mb-10" />
+        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={95} priority className="mb-10" />
 
         {checkEmail ? (
           <div>

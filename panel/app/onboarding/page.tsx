@@ -37,7 +37,7 @@ export default async function OnboardingPage({
       </div>
 
       <div className="glass relative z-10 w-full max-w-md rounded-[28px] p-10 sm:p-12">
-        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={84} className="mb-10" />
+        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={95} className="mb-10" />
         <h1 className="mb-2 text-2xl font-semibold tracking-tight">Contanos de vos</h1>
         <p className="mb-8 text-sm text-muted">Con esto arrancamos tu cuenta de coach (trial de 14 días).</p>
 

@@ -24,7 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <header className="glass-nav sticky top-0 z-10">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-5">
-            <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={32} height={32} className="rounded-lg" />
+            <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={30} height={32} />
             <span className="text-[15px] font-semibold tracking-tight">{coach.marca || coach.nombre || "Tu cuenta"}</span>
             <nav className="ml-3 hidden gap-6 text-sm text-muted sm:flex">
               <Link href="/dashboard" className="transition-colors hover:text-foreground">
