@@ -16,6 +16,19 @@ function exerciseName(row: RoutineExerciseRow): string {
   return e?.nombre_canonico ?? "—";
 }
 
+function diasDesde(fecha: string | null): number | null {
+  if (!fecha) return null;
+  const ms = Date.now() - new Date(fecha).getTime();
+  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+}
+
+function formatUltimaSesion(dias: number | null): string {
+  if (dias === null) return "todavía no entrenó";
+  if (dias === 0) return "entrenó hoy";
+  if (dias === 1) return "entrenó ayer";
+  return `entrenó hace ${dias} días`;
+}
+
 export default async function AthleteDetailPage({
   params,
   searchParams,
@@ -61,6 +74,33 @@ export default async function AthleteDetailPage({
     .order("fecha", { ascending: false })
     .limit(10);
 
+  const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { count: entrenos30dias } = await supabase
+    .from("workouts")
+    .select("id", { count: "exact", head: true })
+    .eq("athlete_id", id)
+    .gte("fecha", hace30dias);
+
+  // Mismo criterio que getAthletePRs en supabase/functions/_shared/queries.ts
+  // y en app/app/prs/page.tsx (portal del atleta): el PR de cada ejercicio es
+  // el peso máximo histórico, sin importar si ese set puntual quedó marcado
+  // es_pr=true.
+  const { data: prSets } = await supabase
+    .from("sets")
+    .select("peso, reps, created_at, exercise_id, exercises(nombre_canonico), workouts!inner(athlete_id)")
+    .eq("workouts.athlete_id", id)
+    .not("peso", "is", null)
+    .order("peso", { ascending: false });
+
+  const seenExercises = new Set<string>();
+  const prs: { exerciseName: string; pesoMax: number; reps: number; fecha: string }[] = [];
+  for (const row of prSets ?? []) {
+    if (seenExercises.has(row.exercise_id)) continue;
+    seenExercises.add(row.exercise_id);
+    const ex = Array.isArray(row.exercises) ? row.exercises[0] : row.exercises;
+    prs.push({ exerciseName: ex?.nombre_canonico ?? "—", pesoMax: row.peso as number, reps: row.reps, fecha: row.created_at });
+  }
+
   const boundAssignRoutine = assignRoutine.bind(null, id);
 
   return (
@@ -71,7 +111,29 @@ export default async function AthleteDetailPage({
           {athlete.telefono || "sin teléfono vinculado"} · {athlete.unidad_peso} ·{" "}
           <span className="capitalize">{athlete.estado}</span>
         </p>
+        <p className="mt-1 text-sm text-muted">
+          {formatUltimaSesion(diasDesde(athlete.ultima_sesion_en))} · {entrenos30dias ?? 0} entreno
+          {entrenos30dias === 1 ? "" : "s"} en los últimos 30 días
+        </p>
       </div>
+
+      <section className="glass rounded-3xl p-7 sm:p-8">
+        <h2 className="mb-5 text-lg font-semibold tracking-tight">Récords personales</h2>
+        {prs.length === 0 ? (
+          <p className="text-sm text-muted">Todavía no tiene ningún PR registrado.</p>
+        ) : (
+          <ul className="flex flex-col gap-2.5 text-sm">
+            {prs.map((pr) => (
+              <li key={pr.exerciseName} className="glass-input flex items-center justify-between rounded-2xl px-4 py-3">
+                <span className="font-medium">{pr.exerciseName}</span>
+                <span className="text-muted">
+                  {pr.pesoMax}x{pr.reps} · {new Date(pr.fecha).toLocaleDateString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="glass rounded-3xl p-7 sm:p-8">
         <h2 className="mb-5 text-lg font-semibold tracking-tight">Acceso al portal</h2>

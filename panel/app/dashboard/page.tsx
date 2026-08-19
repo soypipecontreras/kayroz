@@ -9,6 +9,28 @@ function diasRestantes(trialTerminaEn: string | null): number | null {
   return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 }
 
+function diasDesde(fecha: string | null): number | null {
+  if (!fecha) return null;
+  const ms = Date.now() - new Date(fecha).getTime();
+  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+}
+
+function formatUltimaSesion(dias: number | null): string {
+  if (dias === null) return "todavía no entrenó";
+  if (dias === 0) return "hoy";
+  if (dias === 1) return "ayer";
+  return `hace ${dias} días`;
+}
+
+// "Perdido" = ya entrenó alguna vez pero lleva más de 5 días sin volver —
+// mismo umbral que la propuesta de valor del coach en el §1 de CLAUDE.md
+// ("quién lleva 5 días perdido").
+function ultimaSesionClass(dias: number | null): string {
+  if (dias === null) return "text-muted";
+  if (dias > 5) return "text-red-400";
+  return "text-muted";
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
@@ -39,6 +61,16 @@ export default async function DashboardPage() {
 
   const dias = diasRestantes(coach.trial_termina_en);
 
+  const activos = (athletes ?? []).filter((a) => a.estado === "activo");
+  const entrenaronEstaSemana = activos.filter((a) => {
+    const d = diasDesde(a.ultima_sesion_en);
+    return d !== null && d <= 7;
+  }).length;
+  const perdidos = activos.filter((a) => {
+    const d = diasDesde(a.ultima_sesion_en);
+    return d !== null && d > 5;
+  }).length;
+
   return (
     <div>
       <div className="mb-10">
@@ -48,6 +80,26 @@ export default async function DashboardPage() {
           {dias !== null && ` — ${dias} día${dias === 1 ? "" : "s"} de trial restantes`}
         </p>
       </div>
+
+      {activos.length > 0 && (
+        <section className="glass mb-8 rounded-3xl p-7 sm:p-8">
+          <h2 className="mb-5 text-lg font-semibold tracking-tight">Seguimiento</h2>
+          <div className="flex flex-wrap gap-8">
+            <div>
+              <p className="text-2xl font-semibold tracking-tight">
+                {entrenaronEstaSemana}/{activos.length}
+              </p>
+              <p className="text-sm text-muted">entrenaron en los últimos 7 días</p>
+            </div>
+            <div>
+              <p className={`text-2xl font-semibold tracking-tight ${perdidos > 0 ? "text-red-400" : ""}`}>
+                {perdidos}
+              </p>
+              <p className="text-sm text-muted">llevan más de 5 días perdidos</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="glass mb-8 rounded-3xl p-7 sm:p-8">
         <div className="mb-5 flex items-center justify-between">
@@ -119,8 +171,8 @@ export default async function DashboardPage() {
                   </td>
                   <td className="py-3.5">{a.telefono || "—"}</td>
                   <td className="py-3.5 capitalize">{a.estado}</td>
-                  <td className="py-3.5">
-                    {a.ultima_sesion_en ? new Date(a.ultima_sesion_en).toLocaleDateString() : "todavía no entrenó"}
+                  <td className={`py-3.5 ${ultimaSesionClass(diasDesde(a.ultima_sesion_en))}`}>
+                    {formatUltimaSesion(diasDesde(a.ultima_sesion_en))}
                   </td>
                 </tr>
               ))}

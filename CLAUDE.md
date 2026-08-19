@@ -95,10 +95,18 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
   la función — hay que revocar explícito de `anon` cuando la función no debería ser pública
   (`select grantee from information_schema.routine_privileges where routine_name = '...'`
   para verificar).
+- ✅ **Dashboard de seguimiento del coach (Fase B, primer tramo)**: `/dashboard` ahora muestra
+  un resumen de adherencia ("X/Y entrenaron en los últimos 7 días", cuántos llevan más de 5
+  días sin entrenar — el umbral que menciona la propuesta de valor del coach en §1) y la
+  columna "Última sesión" pasó de fecha cruda a relativa ("hace 3 días"), en rojo si superó el
+  umbral. La ficha de atleta (`/dashboard/athletes/[id]`) suma una sección de "Récords
+  personales" (mismo cálculo que `/app/prs` del portal del atleta) y un dato de adherencia
+  ("entrenó ayer · 3 entrenos en los últimos 30 días"). Todo con números/texto, sin librería de
+  gráficos todavía. Probado en el navegador con tres atletas de prueba (reciente/perdido/
+  nunca entrenó) contra la base real, después borrado.
 - ❌ Todo lo de rutinas normalizadas (`routine_versions`/`routine_days`), `assignments`,
-  progresión automática, sesión guiada, cron/reportes, cobros, dashboard de adherencia del
-  coach con métricas reales: **solo diseño**, cero código. Ver §9 para el orden de
-  construcción.
+  progresión automática, sesión guiada, cron/reportes, cobros, gráficos de progreso en el
+  panel: **solo diseño**, cero código. Ver §9 para el orden de construcción.
 
 ---
 
@@ -402,6 +410,18 @@ espera mi visto bueno antes de seguir.
 - ❌ Fuera de esta fase: dashboard de adherencia del coach con métricas agregadas, ficha de
   atleta más rica (gráficos de progreso), app nativa — quedan para las fases siguientes del
   "trabajo grande" (dashboard de seguimiento real, luego app nativa aparte).
+
+**Panel web — dashboard de seguimiento del coach (Fase B, primer tramo)**
+- ✅ `/dashboard`: resumen de adherencia (entrenaron en los últimos 7 días / total activos,
+  cuántos llevan +5 días perdidos) y "Última sesión" relativa con aviso en rojo. Helpers
+  `diasDesde`/`formatUltimaSesion`/`ultimaSesionClass` en `app/dashboard/page.tsx`.
+- ✅ `/dashboard/athletes/[id]`: sección "Récords personales" (mismo query que
+  `app/app/prs/page.tsx`, reimplementado) y dato de adherencia (última sesión relativa +
+  entrenos en los últimos 30 días vía `count` de `workouts`).
+- ✅ Probado en el navegador con tres atletas de prueba (reciente, perdido hace 8 días, nunca
+  entrenó) — confirmado que el resumen, los colores y el PR se ven correctos — después borrado.
+- ❌ Fuera de este tramo: gráficos de progreso, ficha de atleta con series por semana,
+  filtros/orden en la tabla de atletas — quedan para si hace falta, no se construyen sin pedido.
 
 **Fase 2 — Catálogo + parser:** ✅ ya estaba (seed de 45 ejercicios, `_shared/parser.ts` con
 27 tests). No se reconstruye acá, ver §4.
