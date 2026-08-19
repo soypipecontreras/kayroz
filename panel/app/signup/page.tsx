@@ -40,67 +40,72 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <div className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16">
-        <div className="glass mx-auto w-full max-w-sm rounded-2xl p-8">
-          <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={220} height={92} priority className="mb-8" />
-
-          {checkEmail ? (
-            <div>
-              <h1 className="mb-2 text-xl font-semibold">Revisá tu correo</h1>
-              <p className="text-sm text-muted">
-                Te mandamos un link de confirmación a {email}. Cuando lo abras, volvé acá e iniciá sesión.
-              </p>
-              <Link href="/login" className="mt-4 inline-block text-sm text-foreground underline">
-                Ir a login
-              </Link>
-            </div>
-          ) : (
-            <>
-              <p className="mb-6 text-sm text-muted">Creá tu cuenta de coach — 14 días de prueba, sin tarjeta.</p>
-
-              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                <input
-                  type="email"
-                  required
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
-                />
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  placeholder="Contraseña (mínimo 6 caracteres)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
-                />
-                {error && <p className="text-sm text-red-400">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="mt-1 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
-                  {loading ? "Creando cuenta..." : "Crear cuenta"}
-                </button>
-              </form>
-
-              <p className="mt-4 text-sm text-muted">
-                ¿Ya tenés cuenta?{" "}
-                <Link href="/login" className="text-foreground underline">
-                  Entrá
-                </Link>
-              </p>
-            </>
-          )}
-        </div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-16">
+      <div className="pointer-events-none absolute inset-0">
+        <Image
+          src="/brand/kayroz-cabra.png"
+          alt=""
+          fill
+          className="invert object-cover object-center opacity-[0.14]"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-black/60 to-black" />
       </div>
 
-      <div className="relative hidden w-1/2 overflow-hidden bg-black lg:block">
-        <Image src="/brand/kayroz-cabra.png" alt="" fill className="invert object-cover opacity-80" priority />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent" />
+      <div className="glass relative z-10 w-full max-w-md rounded-[28px] p-10 sm:p-12">
+        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={84} priority className="mb-10" />
+
+        {checkEmail ? (
+          <div>
+            <h1 className="mb-2 text-2xl font-semibold tracking-tight">Revisá tu correo</h1>
+            <p className="text-sm text-muted">
+              Te mandamos un link de confirmación a {email}. Cuando lo abras, volvé acá e iniciá sesión.
+            </p>
+            <Link href="/login" className="mt-6 inline-block text-sm font-medium text-foreground underline underline-offset-4">
+              Ir a login
+            </Link>
+          </div>
+        ) : (
+          <>
+            <h1 className="mb-2 text-2xl font-semibold tracking-tight">Creá tu cuenta</h1>
+            <p className="mb-8 text-sm text-muted">14 días de prueba, sin tarjeta.</p>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <input
+                type="email"
+                required
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="glass-input rounded-2xl px-4 py-3.5 text-[15px] text-foreground outline-none placeholder:text-muted"
+              />
+              <input
+                type="password"
+                required
+                minLength={6}
+                placeholder="Contraseña (mínimo 6 caracteres)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="glass-input rounded-2xl px-4 py-3.5 text-[15px] text-foreground outline-none placeholder:text-muted"
+              />
+              {error && <p className="text-sm text-red-400">{error}</p>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary mt-2 rounded-2xl px-4 py-3.5 text-[15px] font-semibold disabled:opacity-50"
+              >
+                {loading ? "Creando cuenta..." : "Crear cuenta"}
+              </button>
+            </form>
+
+            <p className="mt-8 text-sm text-muted">
+              ¿Ya tenés cuenta?{" "}
+              <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
+                Entrá
+              </Link>
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

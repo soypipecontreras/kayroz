@@ -23,37 +23,34 @@ export default async function SettingsPage({
   if (!coach) redirect("/onboarding");
 
   return (
-    <div className="glass max-w-sm rounded-2xl p-8">
-      <h1 className="mb-1 text-xl font-semibold">Configuración</h1>
-      <p className="mb-6 text-sm text-muted">
+    <div className="glass max-w-md rounded-3xl p-8 sm:p-10">
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Configuración</h1>
+      <p className="mb-8 text-sm text-muted">
         Plan {coach.plan} · Estado {coach.estado}
       </p>
 
-      <form action={updateCoachProfile} className="flex flex-col gap-3">
+      <form action={updateCoachProfile} className="flex flex-col gap-4">
         <input
           name="nombre"
           defaultValue={coach.nombre ?? ""}
           placeholder="Tu nombre"
-          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
+          className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
         />
         <input
           name="marca"
           defaultValue={coach.marca ?? ""}
           placeholder="Nombre de tu marca"
-          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
+          className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
         />
         <input
           name="telefono"
           defaultValue={coach.telefono ?? ""}
           placeholder="Teléfono (para conectar el bot más adelante)"
-          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
+          className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
         {saved && !error && <p className="text-sm text-green-400">Guardado.</p>}
-        <button
-          type="submit"
-          className="self-start rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
-        >
+        <button type="submit" className="btn-primary mt-2 self-start rounded-2xl px-5 py-3 text-[15px] font-semibold">
           Guardar
         </button>
       </form>

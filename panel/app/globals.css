@@ -18,16 +18,26 @@
 body {
   color: var(--foreground);
   background-color: var(--background);
-  /* Resplandores fijos detrás del contenido: sin esto, el backdrop-blur de
-     los paneles "liquid glass" no tiene nada que refractar — blurrear negro
-     plano da negro plano. Fixed (no scroll) para que al hacer scroll el
-     glass muestre distintas porciones del fondo, como vidrio de verdad. */
+  /* Resplandores fijos detrás del contenido, con un drift lentísimo para
+     que se sienta "líquido" en vez de una foto fija — sin esto el
+     backdrop-blur de los paneles no tiene nada que refractar. */
   background-image:
-    radial-gradient(ellipse 900px 700px at 12% -8%, rgba(255, 255, 255, 0.07), transparent 60%),
-    radial-gradient(ellipse 700px 700px at 92% 18%, rgba(255, 255, 255, 0.05), transparent 60%),
-    radial-gradient(ellipse 800px 800px at 45% 115%, rgba(255, 255, 255, 0.055), transparent 60%);
+    radial-gradient(ellipse 1200px 900px at 18% -10%, rgba(255, 255, 255, 0.11), transparent 55%),
+    radial-gradient(ellipse 1000px 1000px at 100% 15%, rgba(255, 255, 255, 0.08), transparent 55%),
+    radial-gradient(ellipse 1100px 1100px at 42% 120%, rgba(255, 255, 255, 0.09), transparent 55%);
   background-attachment: fixed;
+  background-repeat: no-repeat;
   min-height: 100vh;
+  animation: glow-drift 22s ease-in-out infinite alternate;
+}
+
+@keyframes glow-drift {
+  0% {
+    background-position: 0% 0%, 0% 0%, 0% 0%;
+  }
+  100% {
+    background-position: 4% 3%, -3% 4%, 3% -3%;
+  }
 }
 
 @layer utilities {
@@ -37,39 +47,77 @@ body {
 }
 
 @layer components {
-  /* Panel de vidrio: superficie translúcida con blur + un borde e inset
-     highlight sutil para simular el filo de un vidrio real (sin esto, el
-     blur solo se ve como una mancha, no como un material). */
+  /* Panel de vidrio: superficie translúcida con blur fuerte + saturación +
+     un degradé diagonal (simula una fuente de luz arriba-izquierda) + un
+     inset-highlight brillante en el borde superior — sin estos tres juntos
+     el blur se ve como una mancha gris, no como un material real. */
   .glass {
-    background: rgba(255, 255, 255, 0.045);
-    backdrop-filter: blur(24px) saturate(160%);
-    -webkit-backdrop-filter: blur(24px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.025) 60%);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      0 25px 70px rgba(0, 0, 0, 0.6),
+      0 2px 10px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 0 60px rgba(255, 255, 255, 0.025);
   }
 
   /* Igual pero más discreto — para inputs y elementos chicos donde un blur
      tan fuerte como .glass se vuelve ruidoso. */
   .glass-input {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   .glass-input:focus {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.07);
+  }
+
+  .glass-input:hover {
+    border-color: rgba(255, 255, 255, 0.22);
   }
 
   /* Barra de navegación: mismo material que .glass pero sin las sombras de
      "objeto flotante" — se funde con el borde inferior en vez de flotar. */
   .glass-nav {
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* CTA sólido: el único elemento sin vidrio a propósito — necesita ser el
+     punto de máximo contraste de la pantalla. El glow blanco debajo lo
+     hace sentir "elevado" en vez de plano. */
+  .btn-primary {
+    background: #fff;
+    color: #000;
+    box-shadow:
+      0 8px 24px rgba(255, 255, 255, 0.12),
+      0 2px 8px rgba(0, 0, 0, 0.4);
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .btn-primary:hover {
+    box-shadow:
+      0 10px 30px rgba(255, 255, 255, 0.18),
+      0 2px 8px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
   }
 }

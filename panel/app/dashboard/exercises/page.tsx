@@ -36,20 +36,25 @@ export default async function ExercisesPage({
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="glass rounded-2xl p-6">
-        <h2 className="mb-3 font-medium">Agregar ejercicio propio</h2>
-        <form action={createExercise} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mb-2">
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">Ejercicios</h1>
+        <p className="text-sm text-muted">Catálogo global más los tuyos propios.</p>
+      </div>
+
+      <section className="glass rounded-3xl p-7 sm:p-8">
+        <h2 className="mb-5 text-lg font-semibold tracking-tight">Agregar ejercicio propio</h2>
+        <form action={createExercise} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <input
             name="nombre_canonico"
             required
             placeholder="Nombre del ejercicio"
-            className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted sm:col-span-2"
+            className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted sm:col-span-2"
           />
           <select
             name="grupo_muscular"
             required
             defaultValue=""
-            className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none"
+            className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none"
           >
             <option value="" disabled>
               Grupo muscular
@@ -64,7 +69,7 @@ export default async function ExercisesPage({
             name="tipo"
             required
             defaultValue=""
-            className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none"
+            className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none"
           >
             <option value="" disabled>
               Tipo
@@ -78,27 +83,24 @@ export default async function ExercisesPage({
           <input
             name="instrucciones"
             placeholder="Instrucciones (opcional)"
-            className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted sm:col-span-2"
+            className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted sm:col-span-2"
           />
           {error && <p className="text-sm text-red-400 sm:col-span-2">{error}</p>}
-          <button
-            type="submit"
-            className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 sm:col-span-2"
-          >
+          <button type="submit" className="btn-primary rounded-2xl px-4 py-3 text-[15px] font-semibold sm:col-span-2">
             Agregar
           </button>
         </form>
       </section>
 
       {propios.length > 0 && (
-        <section className="glass rounded-2xl p-6">
-          <h2 className="mb-3 font-medium">Tus ejercicios ({propios.length})</h2>
+        <section className="glass rounded-3xl p-7 sm:p-8">
+          <h2 className="mb-5 text-lg font-semibold tracking-tight">Tus ejercicios ({propios.length})</h2>
           <ExerciseList exercises={propios} />
         </section>
       )}
 
-      <section className="glass rounded-2xl p-6">
-        <h2 className="mb-3 font-medium">Catálogo global ({globales.length})</h2>
+      <section className="glass rounded-3xl p-7 sm:p-8">
+        <h2 className="mb-5 text-lg font-semibold tracking-tight">Catálogo global ({globales.length})</h2>
         <ExerciseList exercises={globales} />
       </section>
     </div>
@@ -111,9 +113,12 @@ function ExerciseList({
   exercises: { id: string; nombre_canonico: string; grupo_muscular: string; tipo: string }[];
 }) {
   return (
-    <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {exercises.map((e) => (
-        <li key={e.id} className="glass-input flex items-center justify-between rounded-lg px-3 py-2 text-sm">
+        <li
+          key={e.id}
+          className="glass-input flex items-center justify-between rounded-2xl px-4 py-3 text-[15px] transition-colors hover:border-white/25"
+        >
           <span>{e.nombre_canonico}</span>
           <span className="text-xs text-muted">
             {e.grupo_muscular} · {e.tipo}

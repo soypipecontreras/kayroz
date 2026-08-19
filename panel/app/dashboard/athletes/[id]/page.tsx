@@ -61,22 +61,22 @@ export default async function AthleteDetailPage({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-xl font-semibold">{athlete.nombre || "Sin nombre"}</h1>
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">{athlete.nombre || "Sin nombre"}</h1>
         <p className="text-sm text-muted">
           {athlete.telefono || "sin teléfono vinculado"} · {athlete.unidad_peso} ·{" "}
           <span className="capitalize">{athlete.estado}</span>
         </p>
       </div>
 
-      <section className="glass rounded-2xl p-6">
-        <h2 className="mb-3 font-medium">Rutinas activas</h2>
+      <section className="glass rounded-3xl p-7 sm:p-8">
+        <h2 className="mb-5 text-lg font-semibold tracking-tight">Rutinas activas</h2>
         {!routines || routines.length === 0 ? (
           <p className="mb-4 text-sm text-muted">Todavía no tiene ninguna rutina asignada.</p>
         ) : (
-          <div className="mb-4 flex flex-col gap-4">
+          <div className="mb-6 flex flex-col gap-4">
             {routines.map((r) => (
-              <div key={r.id}>
-                <p className="mb-1 text-sm font-medium">{r.nombre}</p>
+              <div key={r.id} className="glass-input rounded-2xl px-4 py-3.5">
+                <p className="mb-1.5 text-[15px] font-medium">{r.nombre}</p>
                 <ul className="text-sm text-muted">
                   {(routineExercises ?? [])
                     .filter((re) => re.routine_id === r.id)
@@ -93,34 +93,33 @@ export default async function AthleteDetailPage({
         )}
 
         <details>
-          <summary className="cursor-pointer text-sm font-medium">Asignar rutina nueva</summary>
-          <form action={boundAssignRoutine} className="mt-3 flex flex-col gap-3">
+          <summary className="cursor-pointer text-sm font-medium text-muted transition-colors hover:text-foreground">
+            Asignar rutina nueva
+          </summary>
+          <form action={boundAssignRoutine} className="mt-4 flex flex-col gap-4">
             <input
               name="nombre"
               required
               placeholder="Nombre de la rutina (ej: Push A)"
-              className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
+              className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
             />
             <textarea
               name="ejercicios"
               required
               rows={5}
               placeholder={"Una línea por ejercicio, ej:\nPress banca 4x8\nRemo con barra 4x8\nDominadas 3xAMRAP"}
-              className="glass-input rounded-lg px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted"
+              className="glass-input rounded-2xl px-4 py-3 font-mono text-sm text-foreground outline-none placeholder:text-muted"
             />
             {error && <p className="text-sm text-red-400">{error}</p>}
-            <button
-              type="submit"
-              className="self-start rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
-            >
+            <button type="submit" className="btn-primary self-start rounded-2xl px-4 py-3 text-[15px] font-semibold">
               Guardar rutina
             </button>
           </form>
         </details>
       </section>
 
-      <section className="glass rounded-2xl p-6">
-        <h2 className="mb-3 font-medium">Últimos entrenamientos</h2>
+      <section className="glass rounded-3xl p-7 sm:p-8">
+        <h2 className="mb-5 text-lg font-semibold tracking-tight">Últimos entrenamientos</h2>
         {!workouts || workouts.length === 0 ? (
           <p className="text-sm text-muted">
             Todavía no entrenó. Los registros van a aparecer acá cuando conteste al bot.
@@ -128,11 +127,11 @@ export default async function AthleteDetailPage({
         ) : (
           <ul className="flex flex-col gap-3">
             {workouts.map((w) => (
-              <li key={w.id} className="text-sm">
+              <li key={w.id} className="glass-input rounded-2xl px-4 py-3.5 text-sm">
                 <p className="font-medium">
                   {new Date(w.fecha).toLocaleDateString()} <span className="text-muted">({w.estado})</span>
                 </p>
-                <ul className="ml-3 text-muted">
+                <ul className="ml-3 mt-1 text-muted">
                   {(w.sets ?? []).map((s) => {
                     const ex = Array.isArray(s.exercises) ? s.exercises[0] : s.exercises;
                     return (

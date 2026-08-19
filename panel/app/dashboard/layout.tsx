@@ -22,31 +22,31 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen">
       <header className="glass-nav sticky top-0 z-10">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={28} height={28} className="rounded-sm" />
-            <span className="font-semibold">{coach.marca || coach.nombre || "Tu cuenta"}</span>
-            <nav className="ml-2 flex gap-4 text-sm text-muted">
-              <Link href="/dashboard" className="hover:text-foreground">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-5">
+            <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={32} height={32} className="rounded-lg" />
+            <span className="text-[15px] font-semibold tracking-tight">{coach.marca || coach.nombre || "Tu cuenta"}</span>
+            <nav className="ml-3 hidden gap-6 text-sm text-muted sm:flex">
+              <Link href="/dashboard" className="transition-colors hover:text-foreground">
                 Atletas
               </Link>
-              <Link href="/dashboard/exercises" className="hover:text-foreground">
+              <Link href="/dashboard/exercises" className="transition-colors hover:text-foreground">
                 Ejercicios
               </Link>
-              <Link href="/dashboard/settings" className="hover:text-foreground">
+              <Link href="/dashboard/settings" className="transition-colors hover:text-foreground">
                 Configuración
               </Link>
             </nav>
           </div>
           <form action={signOut}>
-            <button type="submit" className="text-sm text-muted underline hover:text-foreground">
+            <button type="submit" className="text-sm text-muted underline underline-offset-4 transition-colors hover:text-foreground">
               Cerrar sesión
             </button>
           </form>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
-      <footer className="mx-auto max-w-3xl px-4 pb-8 text-xs text-muted">Kayroz</footer>
+      <main className="mx-auto max-w-4xl px-6 py-10">{children}</main>
+      <footer className="mx-auto max-w-4xl px-6 pb-10 text-xs text-muted">Kayroz</footer>
     </div>
   );
 }

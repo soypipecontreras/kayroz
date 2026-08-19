@@ -41,19 +41,19 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <p className="mb-8 text-sm text-muted">
-        Plan {coach.plan}
-        {dias !== null && ` — ${dias} día${dias === 1 ? "" : "s"} de trial restantes`}
-      </p>
+      <div className="mb-10">
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">Panel</h1>
+        <p className="text-sm text-muted">
+          Plan {coach.plan}
+          {dias !== null && ` — ${dias} día${dias === 1 ? "" : "s"} de trial restantes`}
+        </p>
+      </div>
 
-      <section className="glass mb-8 rounded-2xl p-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-medium">Códigos de invitación</h2>
+      <section className="glass mb-8 rounded-3xl p-7 sm:p-8">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight">Códigos de invitación</h2>
           <form action={generateInviteCode}>
-            <button
-              type="submit"
-              className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-black transition-opacity hover:opacity-90"
-            >
+            <button type="submit" className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold">
               Generar código
             </button>
           </form>
@@ -65,13 +65,13 @@ export default async function DashboardPage() {
             cuando esté conectado.
           </p>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-2.5">
             {inviteCodes.map((c) => (
               <li
                 key={c.codigo}
-                className="glass-input flex items-center justify-between rounded-lg px-3 py-2 text-sm"
+                className="glass-input flex items-center justify-between rounded-2xl px-4 py-3 text-sm"
               >
-                <span className="font-mono font-medium tracking-wide">{c.codigo}</span>
+                <span className="font-mono text-[15px] font-medium tracking-wide">{c.codigo}</span>
                 <span className="text-muted">
                   {c.usos_actuales}/{c.usos_max} usos{!c.activo && " — inactivo"}
                 </span>
@@ -81,12 +81,12 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      <section className="glass rounded-2xl p-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-medium">Tus atletas</h2>
+      <section className="glass rounded-3xl p-7 sm:p-8">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight">Tus atletas</h2>
           <Link
             href="/dashboard/athletes/new"
-            className="glass-input rounded-lg px-3 py-1.5 text-sm font-medium hover:border-white/40"
+            className="glass-input rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:border-white/40"
           >
             + Agregar atleta
           </Link>
@@ -99,24 +99,27 @@ export default async function DashboardPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-muted">
-                <th className="pb-2 font-normal">Nombre</th>
-                <th className="pb-2 font-normal">Teléfono</th>
-                <th className="pb-2 font-normal">Estado</th>
-                <th className="pb-2 font-normal">Última sesión</th>
+              <tr className="border-b border-white/10 text-left text-muted">
+                <th className="pb-3 font-normal">Nombre</th>
+                <th className="pb-3 font-normal">Teléfono</th>
+                <th className="pb-3 font-normal">Estado</th>
+                <th className="pb-3 font-normal">Última sesión</th>
               </tr>
             </thead>
             <tbody>
               {athletes.map((a) => (
-                <tr key={a.id} className="border-b border-border/60">
-                  <td className="py-2">
-                    <Link href={`/dashboard/athletes/${a.id}`} className="underline hover:text-white">
+                <tr key={a.id} className="border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]">
+                  <td className="py-3.5">
+                    <Link
+                      href={`/dashboard/athletes/${a.id}`}
+                      className="font-medium underline underline-offset-4 transition-colors hover:text-white"
+                    >
                       {a.nombre || "Sin nombre"}
                     </Link>
                   </td>
-                  <td className="py-2">{a.telefono || "—"}</td>
-                  <td className="py-2 capitalize">{a.estado}</td>
-                  <td className="py-2">
+                  <td className="py-3.5">{a.telefono || "—"}</td>
+                  <td className="py-3.5 capitalize">{a.estado}</td>
+                  <td className="py-3.5">
                     {a.ultima_sesion_en ? new Date(a.ultima_sesion_en).toLocaleDateString() : "todavía no entrenó"}
                   </td>
                 </tr>
