@@ -46,13 +46,13 @@ export default async function DashboardPage() {
         {dias !== null && ` — ${dias} día${dias === 1 ? "" : "s"} de trial restantes`}
       </p>
 
-      <section className="mb-8 rounded-lg border border-border p-5">
+      <section className="glass mb-8 rounded-2xl p-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-medium">Códigos de invitación</h2>
           <form action={generateInviteCode}>
             <button
               type="submit"
-              className="rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+              className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-black transition-opacity hover:opacity-90"
             >
               Generar código
             </button>
@@ -67,7 +67,10 @@ export default async function DashboardPage() {
         ) : (
           <ul className="flex flex-col gap-2">
             {inviteCodes.map((c) => (
-              <li key={c.codigo} className="flex items-center justify-between rounded-md bg-surface px-3 py-2 text-sm">
+              <li
+                key={c.codigo}
+                className="glass-input flex items-center justify-between rounded-lg px-3 py-2 text-sm"
+              >
                 <span className="font-mono font-medium tracking-wide">{c.codigo}</span>
                 <span className="text-muted">
                   {c.usos_actuales}/{c.usos_max} usos{!c.activo && " — inactivo"}
@@ -78,12 +81,12 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      <section className="rounded-lg border border-border p-5">
+      <section className="glass rounded-2xl p-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-medium">Tus atletas</h2>
           <Link
             href="/dashboard/athletes/new"
-            className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:border-white"
+            className="glass-input rounded-lg px-3 py-1.5 text-sm font-medium hover:border-white/40"
           >
             + Agregar atleta
           </Link>

@@ -17,11 +17,59 @@
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background-color: var(--background);
+  /* Resplandores fijos detrás del contenido: sin esto, el backdrop-blur de
+     los paneles "liquid glass" no tiene nada que refractar — blurrear negro
+     plano da negro plano. Fixed (no scroll) para que al hacer scroll el
+     glass muestre distintas porciones del fondo, como vidrio de verdad. */
+  background-image:
+    radial-gradient(ellipse 900px 700px at 12% -8%, rgba(255, 255, 255, 0.07), transparent 60%),
+    radial-gradient(ellipse 700px 700px at 92% 18%, rgba(255, 255, 255, 0.05), transparent 60%),
+    radial-gradient(ellipse 800px 800px at 45% 115%, rgba(255, 255, 255, 0.055), transparent 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Panel de vidrio: superficie translúcida con blur + un borde e inset
+     highlight sutil para simular el filo de un vidrio real (sin esto, el
+     blur solo se ve como una mancha, no como un material). */
+  .glass {
+    background: rgba(255, 255, 255, 0.045);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  }
+
+  /* Igual pero más discreto — para inputs y elementos chicos donde un blur
+     tan fuerte como .glass se vuelve ruidoso. */
+  .glass-input {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .glass-input:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  /* Barra de navegación: mismo material que .glass pero sin las sombras de
+     "objeto flotante" — se funde con el borde inferior en vez de flotar. */
+  .glass-nav {
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 }

@@ -20,8 +20,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!coach) redirect("/onboarding");
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
+    <div className="min-h-screen">
+      <header className="glass-nav sticky top-0 z-10">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-4">
             <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={28} height={28} className="rounded-sm" />

@@ -34,7 +34,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       <div className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16">
-        <div className="mx-auto w-full max-w-sm">
+        <div className="glass mx-auto w-full max-w-sm rounded-2xl p-8">
           <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={220} height={92} priority className="mb-8" />
           <p className="mb-6 text-sm text-muted">Entrá con tu cuenta de coach.</p>
 
@@ -45,7 +45,7 @@ export default function LoginPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+              className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
             />
             <input
               type="password"
@@ -53,13 +53,13 @@ export default function LoginPage() {
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+              className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
             />
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="mt-1 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "Entrando..." : "Entrar"}
             </button>

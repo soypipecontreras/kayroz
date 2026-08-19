@@ -23,7 +23,7 @@ export default async function SettingsPage({
   if (!coach) redirect("/onboarding");
 
   return (
-    <div className="max-w-sm">
+    <div className="glass max-w-sm rounded-2xl p-8">
       <h1 className="mb-1 text-xl font-semibold">Configuración</h1>
       <p className="mb-6 text-sm text-muted">
         Plan {coach.plan} · Estado {coach.estado}
@@ -34,25 +34,25 @@ export default async function SettingsPage({
           name="nombre"
           defaultValue={coach.nombre ?? ""}
           placeholder="Tu nombre"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         <input
           name="marca"
           defaultValue={coach.marca ?? ""}
           placeholder="Nombre de tu marca"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         <input
           name="telefono"
           defaultValue={coach.telefono ?? ""}
           placeholder="Teléfono (para conectar el bot más adelante)"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
         {saved && !error && <p className="text-sm text-green-400">Guardado.</p>}
         <button
           type="submit"
-          className="self-start rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+          className="self-start rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
         >
           Guardar
         </button>

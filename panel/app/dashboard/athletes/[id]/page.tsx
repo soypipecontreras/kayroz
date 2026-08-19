@@ -68,7 +68,7 @@ export default async function AthleteDetailPage({
         </p>
       </div>
 
-      <section className="rounded-lg border border-border p-5">
+      <section className="glass rounded-2xl p-6">
         <h2 className="mb-3 font-medium">Rutinas activas</h2>
         {!routines || routines.length === 0 ? (
           <p className="mb-4 text-sm text-muted">Todavía no tiene ninguna rutina asignada.</p>
@@ -99,19 +99,19 @@ export default async function AthleteDetailPage({
               name="nombre"
               required
               placeholder="Nombre de la rutina (ej: Push A)"
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+              className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
             />
             <textarea
               name="ejercicios"
               required
               rows={5}
               placeholder={"Una línea por ejercicio, ej:\nPress banca 4x8\nRemo con barra 4x8\nDominadas 3xAMRAP"}
-              className="rounded-md border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-white"
+              className="glass-input rounded-lg px-3 py-2 font-mono text-sm text-foreground outline-none placeholder:text-muted"
             />
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button
               type="submit"
-              className="self-start rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+              className="self-start rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
             >
               Guardar rutina
             </button>
@@ -119,7 +119,7 @@ export default async function AthleteDetailPage({
         </details>
       </section>
 
-      <section className="rounded-lg border border-border p-5">
+      <section className="glass rounded-2xl p-6">
         <h2 className="mb-3 font-medium">Últimos entrenamientos</h2>
         {!workouts || workouts.length === 0 ? (
           <p className="text-sm text-muted">

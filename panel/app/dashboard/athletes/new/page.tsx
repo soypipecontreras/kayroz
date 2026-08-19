@@ -8,7 +8,7 @@ export default async function NewAthletePage({
   const { error } = await searchParams;
 
   return (
-    <div className="max-w-sm">
+    <div className="glass max-w-sm rounded-2xl p-8">
       <h1 className="mb-1 text-xl font-semibold">Agregar atleta</h1>
       <p className="mb-6 text-sm text-muted">
         Se agrega directo, sin pasar por un código de invitación. Si más adelante el atleta usa el bot, se
@@ -20,17 +20,17 @@ export default async function NewAthletePage({
           name="nombre"
           required
           placeholder="Nombre del atleta"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         <input
           name="telefono"
           placeholder="Teléfono (opcional, +57...)"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         <select
           name="unidad_peso"
           defaultValue="kg"
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-white"
+          className="glass-input rounded-lg px-3 py-2 text-sm text-foreground outline-none"
         >
           <option value="kg">Kilogramos (kg)</option>
           <option value="lb">Libras (lb)</option>
@@ -38,7 +38,7 @@ export default async function NewAthletePage({
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button
           type="submit"
-          className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+          className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90"
         >
           Agregar
         </button>

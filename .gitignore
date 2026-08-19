@@ -3,5 +3,8 @@
 # Supabase CLI local link/metadata — específico de esta máquina, no portable.
 supabase/.temp/
 
-# Config local de Claude Code — permisos/allowlist por desarrollador.
-.claude/settings.local.json
+# Vercel CLI local link (projectId/orgId de esta máquina, no portable).
+.vercel/
+
+# Config y estado local de Claude Code — específico de esta máquina/sesión.
+.claude/
