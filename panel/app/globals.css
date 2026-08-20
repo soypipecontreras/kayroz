@@ -213,3 +213,77 @@ body {
     transform: translateY(0);
   }
 }
+
+/* ============================================================
+   Pantalla de carga (ver app/LoadingScreen.tsx)
+   ============================================================ */
+
+/* El loader entero entra con 180ms de retraso y fill-mode `both`: durante ese
+   rato queda en opacity 0. En una navegación rápida no llega a verse nunca, y
+   así se evita el parpadeo — que molesta más que no mostrar nada. */
+.kayroz-loader {
+  animation: kayroz-appear 0.35s ease 0.18s both;
+}
+
+/* La cabra "respira": escala y opacidad muy sutiles. Nada de girar, que se
+   sentiría genérico. */
+.kayroz-loader-breathe {
+  animation: kayroz-breathe 2.2s ease-in-out infinite;
+}
+
+.kayroz-loader-track {
+  background: var(--divider);
+}
+
+.kayroz-loader-sweep {
+  background: linear-gradient(90deg, transparent, var(--foreground), transparent);
+  animation: kayroz-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes kayroz-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes kayroz-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes kayroz-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+/* Con movimiento reducido el loader aparece igual, pero quieto: sigue
+   comunicando "esperá" sin animación. */
+@media (prefers-reduced-motion: reduce) {
+  .kayroz-loader {
+    animation: kayroz-appear 0.01s linear 0.18s both;
+  }
+  .kayroz-loader-breathe,
+  .kayroz-loader-sweep {
+    animation: none;
+  }
+  .kayroz-loader-breathe {
+    opacity: 0.9;
+  }
+  .kayroz-loader-sweep {
+    display: none;
+  }
+}
