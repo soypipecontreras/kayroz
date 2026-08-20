@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import LoadingScreen from "../LoadingScreen";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -22,8 +23,8 @@ export default function SignupPage() {
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({ email, password });
 
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message.includes("already registered") ? "Ese email ya tiene cuenta." : error.message);
       return;
     }
@@ -32,12 +33,17 @@ export default function SignupPage() {
     // todavía — el alta del coach queda pendiente hasta el primer login
     // (ver /onboarding).
     if (data.session) {
+      // Sin setLoading(false): falta que cargue /onboarding y apagar el loader
+      // acá dejaría el formulario quieto en el tramo más lento.
       router.push("/onboarding");
       router.refresh();
     } else {
+      setLoading(false);
       setCheckEmail(true);
     }
   }
+
+  if (loading) return <LoadingScreen label="Creando tu cuenta" />;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-16">

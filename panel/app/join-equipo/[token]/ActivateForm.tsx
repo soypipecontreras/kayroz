@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import LoadingScreen from "../../LoadingScreen";
 import { activateMembership } from "./actions";
 
 export default function ActivateForm({ token }: { token: string }) {
@@ -59,8 +60,8 @@ export default function ActivateForm({ token }: { token: string }) {
     }
 
     const result = await activateMembership(token);
-    setLoading(false);
     if (result.error) {
+      setLoading(false);
       setError(result.error);
       return;
     }
@@ -68,6 +69,8 @@ export default function ActivateForm({ token }: { token: string }) {
     router.push("/dashboard");
     router.refresh();
   }
+
+  if (loading) return <LoadingScreen label="Activando tu acceso" />;
 
   if (checkEmail) {
     return (

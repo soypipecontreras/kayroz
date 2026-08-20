@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -36,7 +37,13 @@ export function etiquetaClientes(tipo: OrgTipo): string {
 
 // Contexto del usuario logueado. Si no tiene membership, no es staff: puede ser
 // un atleta (va a /app) o alguien recién registrado (va a /onboarding).
-export async function getOrgContext(supabase: SupabaseServerClient): Promise<OrgContext> {
+//
+// Envuelto en `cache()`: el layout del panel y la página SIEMPRE lo llaman los
+// dos, y sin esto cada página hacía cuatro viajes de red por identidad (dos
+// validaciones de sesión + dos consultas) donde alcanzan dos. Era la causa de
+// que el panel tardara en abrir. Depende de que `createClient` también esté
+// cacheado, si no llega un cliente distinto cada vez y el caché nunca acierta.
+export const getOrgContext = cache(async (supabase: SupabaseServerClient): Promise<OrgContext> => {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -74,4 +81,4 @@ export async function getOrgContext(supabase: SupabaseServerClient): Promise<Org
     rol: membership.rol as Rol,
     membershipId: membership.id,
   };
-}
+});

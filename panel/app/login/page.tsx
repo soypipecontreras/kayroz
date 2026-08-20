@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import LoadingScreen from "../LoadingScreen";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,7 +38,10 @@ export default function LoginPage() {
       .eq("estado", "activo")
       .maybeSingle();
 
-    setLoading(false);
+    // OJO: acá NO se hace setLoading(false). Entre el push y que el panel
+    // aparezca todavía falta lo más lento (el servidor arma la página), y
+    // apagar el loader dejaría el formulario quieto justo en ese tramo — que
+    // es exactamente lo que se sentía como "se queda cargando un rato".
     if (membership) {
       router.push("/dashboard");
     } else {
@@ -47,6 +51,11 @@ export default function LoginPage() {
     }
     router.refresh();
   }
+
+  // Mientras se resuelve el login se muestra la marca a pantalla completa en
+  // vez del formulario congelado. Se mantiene hasta que el panel reemplaza
+  // esta página.
+  if (loading) return <LoadingScreen label="Entrando" />;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-16">

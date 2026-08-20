@@ -21,8 +21,8 @@ export default function LoadingScreen({
   label?: string;
 }) {
   const alto = variant === "full" ? "min-h-screen" : "min-h-[60vh]";
-  const cabra = variant === "full" ? { w: 116, h: 180 } : { w: 84, h: 130 };
-  const marca = variant === "full" ? { w: 150, h: 71 } : { w: 116, h: 55 };
+  const cabra = variant === "full" ? { w: 168, h: 261 } : { w: 124, h: 193 };
+  const marca = variant === "full" ? { w: 210, h: 99 } : { w: 160, h: 76 };
 
   return (
     <div
@@ -50,7 +50,7 @@ export default function LoadingScreen({
         />
         {/* Barrita de progreso indeterminado: da sensación de avance sin
             mentir con un porcentaje que no conocemos. */}
-        <div className="kayroz-loader-track relative h-px w-28 overflow-hidden">
+        <div className="kayroz-loader-track relative h-px w-36 overflow-hidden">
           <span className="kayroz-loader-sweep absolute inset-y-0 w-1/3" />
         </div>
       </div>
