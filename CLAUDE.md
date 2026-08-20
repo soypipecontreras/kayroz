@@ -115,6 +115,13 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
   `<textarea>` de "Press banca 4x8" que había antes. `rpe_obj`, `descanso_seg` y `notas` ya
   existían en el esquema desde siempre pero **ninguna UI los exponía**; ahora sí, y el portal
   del atleta los muestra.
+  **Media sobre ejercicios del catálogo global** (`org_exercise_media`, Fase F): los 45
+  ejercicios sembrados son UNA fila compartida por todas las organizaciones, así que escribirles
+  `imagen_path`/`video_path` encima le mostraría el video de un gimnasio a todos los demás. Por
+  eso la media NO vive en `exercises` sino en una tabla de override por `(org_id, exercise_id)`:
+  cada org le pone su propio video a "Press banca" sin tocar la fila compartida. Verificado con
+  dos orgs simuladas por SQL: A sube, su atleta lo ve, B no lo ve ni lo puede pisar ni borrar.
+  Prioridad al renderizar: override de la rutina → media de la org → `imagen_url` del catálogo.
   **Dos buckets de media, a propósito**: `exercise-media` es PÚBLICO y tiene el catálogo global
   de la plataforma (los 45 ejercicios sembrados ya traen imagen — ojo, §0 decía que no había
   ninguna y estaba desactualizado); `coach-media` es PRIVADO, 50 MB máx, con lista blanca de

@@ -85,35 +85,46 @@ export async function setExerciseMedia(
 
   // La ruta la arma el navegador, así que se verifica que caiga dentro de la
   // carpeta de esta org (las policies del bucket ya lo exigen para subir,
-  // esto evita además guardar una ruta ajena en la fila propia).
+  // esto evita además guardar una ruta ajena).
   if (!path.startsWith(`${orgId}/`)) return { error: "Ruta de archivo inválida." };
 
+  // Solo hace falta comprobar que el ejercicio EXISTE y que esta org lo puede
+  // ver: RLS ya limita el select a los globales más los propios. La media va
+  // siempre a org_exercise_media, tanto para un ejercicio propio como para uno
+  // del catálogo — así una org nunca escribe sobre la fila compartida.
   const { data: exercise } = await supabase
     .from("exercises")
-    .select("id, org_id, es_global, imagen_path, video_path")
+    .select("id")
     .eq("id", exerciseId)
     .maybeSingle();
   if (!exercise) return { error: "No encontramos el ejercicio." };
-  if (exercise.es_global || exercise.org_id !== orgId) {
-    return { error: "Solo podés cargar media en tus propios ejercicios." };
-  }
 
-  const column = kind === "imagen" ? "imagen_path" : "video_path";
-  const previous = kind === "imagen" ? exercise.imagen_path : exercise.video_path;
+  const columna = kind === "imagen" ? "imagen_path" : "video_path";
 
-  // El .select() no es decorativo: si una policy de RLS bloquea el update,
-  // PostgREST no devuelve error, simplemente no toca ninguna fila. Sin esto el
-  // archivo quedaba subido y la fila sin actualizar, en silencio.
-  const { data: updated, error } = await supabase
-    .from("exercises")
-    .update({ [column]: path })
-    .eq("id", exerciseId)
-    .select("id");
+  const { data: previo } = await supabase
+    .from("org_exercise_media")
+    .select("imagen_path, video_path")
+    .eq("org_id", orgId)
+    .eq("exercise_id", exerciseId)
+    .maybeSingle();
+  const anterior = kind === "imagen" ? previo?.imagen_path : previo?.video_path;
+
+  const { data: guardado, error } = await supabase
+    .from("org_exercise_media")
+    .upsert(
+      { org_id: orgId, exercise_id: exerciseId, [columna]: path, updated_at: new Date().toISOString() },
+      { onConflict: "org_id,exercise_id" },
+    )
+    .select("exercise_id");
+
   if (error) return { error: error.message };
-  if (!updated || updated.length === 0) return { error: "No pudimos guardar la media." };
+  // Un upsert que RLS bloquea no da error, solo no toca filas (ver §0).
+  if (!guardado || guardado.length === 0) return { error: "No pudimos guardar la media." };
 
-  if (previous && previous !== path) {
-    await supabase.storage.from(COACH_MEDIA_BUCKET).remove([previous]);
+  // El archivo viejo ya no lo referencia nadie: si no, el bucket se llena de
+  // versiones huérfanas que igual se pagan.
+  if (anterior && anterior !== path) {
+    await supabase.storage.from(COACH_MEDIA_BUCKET).remove([anterior]);
   }
 
   revalidatePath(`/dashboard/exercises/${exerciseId}`);
@@ -129,29 +140,36 @@ export async function removeExerciseMedia(
   const orgId = await ownOrgOrNull(supabase);
   if (!orgId) return { error: "No hay sesión activa." };
 
-  const { data: exercise } = await supabase
-    .from("exercises")
-    .select("id, org_id, es_global, imagen_path, video_path")
-    .eq("id", exerciseId)
+  const { data: previo } = await supabase
+    .from("org_exercise_media")
+    .select("imagen_path, video_path")
+    .eq("org_id", orgId)
+    .eq("exercise_id", exerciseId)
     .maybeSingle();
-  if (!exercise) return { error: "No encontramos el ejercicio." };
-  if (exercise.es_global || exercise.org_id !== orgId) {
-    return { error: "Solo podés editar tus propios ejercicios." };
-  }
+  if (!previo) return {};
 
-  const column = kind === "imagen" ? "imagen_path" : "video_path";
-  const current = kind === "imagen" ? exercise.imagen_path : exercise.video_path;
+  const columna = kind === "imagen" ? "imagen_path" : "video_path";
+  const actual = kind === "imagen" ? previo.imagen_path : previo.video_path;
+  const otro = kind === "imagen" ? previo.video_path : previo.imagen_path;
 
-  const { data: updated, error } = await supabase
-    .from("exercises")
-    .update({ [column]: null })
-    .eq("id", exerciseId)
-    .select("id");
+  // Si al quitar esta no queda ninguna, se borra la fila entera en vez de
+  // dejarla con las dos columnas en null.
+  const { error } = otro
+    ? await supabase
+        .from("org_exercise_media")
+        .update({ [columna]: null, updated_at: new Date().toISOString() })
+        .eq("org_id", orgId)
+        .eq("exercise_id", exerciseId)
+    : await supabase
+        .from("org_exercise_media")
+        .delete()
+        .eq("org_id", orgId)
+        .eq("exercise_id", exerciseId);
+
   if (error) return { error: error.message };
-  if (!updated || updated.length === 0) return { error: "No pudimos quitar la media." };
 
-  if (current) {
-    await supabase.storage.from(COACH_MEDIA_BUCKET).remove([current]);
+  if (actual) {
+    await supabase.storage.from(COACH_MEDIA_BUCKET).remove([actual]);
   }
 
   revalidatePath(`/dashboard/exercises/${exerciseId}`);

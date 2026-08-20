@@ -13,15 +13,26 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
 
   const { data: exercise } = await supabase
     .from("exercises")
-    .select("id, nombre_canonico, grupo_muscular, tipo, instrucciones, es_global, org_id, imagen_url, imagen_path, video_path")
+    .select("id, nombre_canonico, grupo_muscular, tipo, instrucciones, es_global, org_id, imagen_url")
     .eq("id", id)
     .maybeSingle();
   if (!exercise) notFound();
 
-  const esPropio = !exercise.es_global && exercise.org_id === org.orgId;
-  const signed = await signMediaPaths(supabase, [exercise.imagen_path, exercise.video_path]);
-  const imagenSrc = exercise.imagen_path ? signed.get(exercise.imagen_path) : exercise.imagen_url;
-  const videoSrc = exercise.video_path ? signed.get(exercise.video_path) : null;
+  // La media propia de esta org sobre este ejercicio. Vive aparte de la fila
+  // del ejercicio para que un gimnasio pueda ponerle su video a "Press banca"
+  // (que es del catálogo compartido) sin que lo vean los demás.
+  const { data: media } = await supabase
+    .from("org_exercise_media")
+    .select("imagen_path, video_path")
+    .eq("org_id", org.orgId)
+    .eq("exercise_id", id)
+    .maybeSingle();
+
+  const firmadas = await signMediaPaths(supabase, [media?.imagen_path, media?.video_path]);
+  // La imagen del catálogo global es el último recurso: si la org subió la
+  // suya, gana la suya.
+  const imagenSrc = media?.imagen_path ? firmadas.get(media.imagen_path) : exercise.imagen_url;
+  const videoSrc = media?.video_path ? firmadas.get(media.video_path) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -51,20 +62,13 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
         ) : (
           <p className="mb-4 text-sm text-muted">Sin foto todavía.</p>
         )}
-        {esPropio ? (
-          <MediaUploader
-            orgId={org.orgId}
-            kind="imagen"
-            currentPath={exercise.imagen_path}
-            onSave={setExerciseMedia.bind(null, exercise.id, "imagen")}
-            onRemove={removeExerciseMedia.bind(null, exercise.id, "imagen")}
-          />
-        ) : (
-          <p className="text-sm text-muted">
-            Este ejercicio es del catálogo global, no se puede editar su media. Si querés uno con tu
-            propia foto o video, creá un ejercicio propio.
-          </p>
-        )}
+        <MediaUploader
+          orgId={org.orgId}
+          kind="imagen"
+          currentPath={media?.imagen_path ?? null}
+          onSave={setExerciseMedia.bind(null, exercise.id, "imagen")}
+          onRemove={removeExerciseMedia.bind(null, exercise.id, "imagen")}
+        />
       </section>
 
       <section className="glass rounded-3xl p-7 sm:p-8">
@@ -74,15 +78,18 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
         ) : (
           <p className="mb-4 text-sm text-muted">Sin video todavía.</p>
         )}
-        {esPropio && (
-          <MediaUploader
-            orgId={org.orgId}
-            kind="video"
-            currentPath={exercise.video_path}
-            onSave={setExerciseMedia.bind(null, exercise.id, "video")}
-            onRemove={removeExerciseMedia.bind(null, exercise.id, "video")}
-          />
-        )}
+        <MediaUploader
+          orgId={org.orgId}
+          kind="video"
+          currentPath={media?.video_path ?? null}
+          onSave={setExerciseMedia.bind(null, exercise.id, "video")}
+          onRemove={removeExerciseMedia.bind(null, exercise.id, "video")}
+        />
+        <p className="mt-4 text-sm text-muted">
+          Hasta 50 MB, en mp4, webm o mov. Se guarda en tu propio espacio y solo lo ven vos y tus
+          clientes — el link vence, así que no queda dando vueltas.
+          {exercise.es_global && " Tu video solo lo ves vos, no los demás gimnasios."}
+        </p>
       </section>
     </div>
   );

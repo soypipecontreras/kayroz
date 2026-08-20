@@ -7,12 +7,11 @@ interface ExerciseRef {
   nombre_canonico: string;
   instrucciones: string | null;
   imagen_url: string | null;
-  imagen_path: string | null;
-  video_path: string | null;
 }
 
 interface RoutineExerciseRow {
   routine_id: string;
+  exercise_id: string;
   orden: number;
   series_obj: number;
   reps_min: number;
@@ -52,7 +51,7 @@ export default async function AthleteHomePage() {
 
   const { data: athlete } = await supabase
     .from("athletes")
-    .select("id, nombre")
+    .select("id, nombre, org_id")
     .eq("auth_user_id", user.id)
     .maybeSingle();
   if (!athlete) redirect("/login");
@@ -69,7 +68,7 @@ export default async function AthleteHomePage() {
     ? await supabase
         .from("routine_exercises")
         .select(
-          "routine_id, orden, series_obj, reps_min, reps_max, rpe_obj, descanso_seg, notas, imagen_path, video_path, exercises(nombre_canonico, instrucciones, imagen_url, imagen_path, video_path)",
+          "routine_id, exercise_id, orden, series_obj, reps_min, reps_max, rpe_obj, descanso_seg, notas, imagen_path, video_path, exercises(nombre_canonico, instrucciones, imagen_url)",
         )
         .in("routine_id", routineIds)
         .order("orden", { ascending: true })
@@ -77,27 +76,47 @@ export default async function AthleteHomePage() {
 
   const rows = (routineExercises ?? []) as unknown as RoutineExerciseRow[];
 
+  // Media que el gimnasio subió para estos ejercicios. Vive aparte porque los
+  // del catálogo son filas compartidas entre todas las organizaciones.
+  const exerciseIds = [...new Set(rows.map((re) => re.exercise_id).filter(Boolean))];
+  const { data: orgMedia } = exerciseIds.length
+    ? await supabase
+        .from("org_exercise_media")
+        .select("exercise_id, imagen_path, video_path")
+        .eq("org_id", athlete.org_id)
+        .in("exercise_id", exerciseIds)
+    : { data: [] as { exercise_id: string; imagen_path: string | null; video_path: string | null }[] };
+
+  const mediaPorEjercicio = new Map(
+    (orgMedia ?? []).map((m) => [m.exercise_id, m]),
+  );
+
   // La media del bucket del coach es privada, así que hay que firmarla. Se
   // firma todo de una sola vez en vez de una llamada por ejercicio.
   const signed = await signMediaPaths(
     supabase,
     rows.flatMap((re) => {
-      const ex = exerciseOf(re);
-      return [re.imagen_path, re.video_path, ex?.imagen_path, ex?.video_path];
+      const propia = mediaPorEjercicio.get(re.exercise_id);
+      return [re.imagen_path, re.video_path, propia?.imagen_path, propia?.video_path];
     }),
   );
 
   // El override de la rutina gana sobre lo que traiga el ejercicio del
   // catálogo; la imagen pública del catálogo global es el último recurso.
+  // Prioridad: lo puesto para ESTA rutina gana sobre lo del ejercicio en
+  // general, y la imagen del catálogo global es el último recurso.
   function mediaFor(re: RoutineExerciseRow): { imagen: string | null; video: string | null } {
     const ex = exerciseOf(re);
+    const propia = mediaPorEjercicio.get(re.exercise_id);
     const imagen =
       (re.imagen_path && signed.get(re.imagen_path)) ||
-      (ex?.imagen_path && signed.get(ex.imagen_path)) ||
+      (propia?.imagen_path && signed.get(propia.imagen_path)) ||
       ex?.imagen_url ||
       null;
     const video =
-      (re.video_path && signed.get(re.video_path)) || (ex?.video_path && signed.get(ex.video_path)) || null;
+      (re.video_path && signed.get(re.video_path)) ||
+      (propia?.video_path && signed.get(propia.video_path)) ||
+      null;
     return { imagen, video };
   }
 

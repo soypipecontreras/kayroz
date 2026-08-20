@@ -14,14 +14,22 @@ export default async function ExercisesPage({
   const supabase = await createClient();
   const { error } = await searchParams;
 
-  // Solo para exigir sesión y org: la lista sale por RLS.
-  await getOrgContext(supabase);
+  const org = await getOrgContext(supabase);
 
   const { data: exercises } = await supabase
     .from("exercises")
-    .select("id, nombre_canonico, grupo_muscular, tipo, es_global, imagen_path, video_path")
+    .select("id, nombre_canonico, grupo_muscular, tipo, es_global")
     .order("es_global", { ascending: false })
     .order("nombre_canonico", { ascending: true });
+
+  // Para marcar cuáles ya tienen video propio de esta org.
+  const { data: media } = await supabase
+    .from("org_exercise_media")
+    .select("exercise_id, video_path")
+    .eq("org_id", org.orgId);
+  const conVideo = new Set(
+    (media ?? []).filter((m) => m.video_path).map((m) => m.exercise_id),
+  );
 
   const globales = (exercises ?? []).filter((e) => e.es_global);
   const propios = (exercises ?? []).filter((e) => !e.es_global);
@@ -87,13 +95,13 @@ export default async function ExercisesPage({
       {propios.length > 0 && (
         <section className="glass rounded-3xl p-7 sm:p-8">
           <h2 className="mb-5 text-lg font-semibold tracking-tight">Tus ejercicios ({propios.length})</h2>
-          <ExerciseList exercises={propios} />
+          <ExerciseList exercises={propios} conVideo={conVideo} />
         </section>
       )}
 
       <section className="glass rounded-3xl p-7 sm:p-8">
         <h2 className="mb-5 text-lg font-semibold tracking-tight">Catálogo global ({globales.length})</h2>
-        <ExerciseList exercises={globales} />
+        <ExerciseList exercises={globales} conVideo={conVideo} />
       </section>
     </div>
   );
@@ -101,15 +109,15 @@ export default async function ExercisesPage({
 
 function ExerciseList({
   exercises,
+  conVideo,
 }: {
   exercises: {
     id: string;
     nombre_canonico: string;
     grupo_muscular: string;
     tipo: string;
-    imagen_path?: string | null;
-    video_path?: string | null;
   }[];
+  conVideo: Set<string>;
 }) {
   return (
     <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -121,7 +129,7 @@ function ExerciseList({
           >
             <span>
               {e.nombre_canonico}
-              {e.video_path && <span className="ml-2 text-xs text-muted">▶</span>}
+              {conVideo.has(e.id) && <span className="ml-2 text-xs text-muted" title="Tiene video">▶</span>}
             </span>
             <span className="text-xs text-muted">
               {e.grupo_muscular} · {e.tipo}
