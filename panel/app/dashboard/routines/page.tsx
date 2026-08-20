@@ -50,7 +50,7 @@ export default async function RoutineTemplatesPage({
             <li key={t.id}>
               <Link
                 href={`/dashboard/routines/${t.id}`}
-                className="glass flex items-center justify-between rounded-3xl p-6 transition-colors hover:border-white/25"
+                className="glass flex items-center justify-between rounded-3xl p-6 transition-colors hover:border-border-strong"
               >
                 <div>
                   <p className="text-[15px] font-medium">{t.nombre}</p>

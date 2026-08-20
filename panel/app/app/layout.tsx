@@ -45,7 +45,7 @@ export default async function AthletePortalLayout({ children }: { children: Reac
       <header className="glass-nav sticky top-0 z-10">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-5">
-            <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={30} height={32} />
+            <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={30} height={32} className="logo-kayroz" />
             <span className="text-[15px] font-semibold tracking-tight">
               {org?.marca || org?.nombre || "Kayroz"}
             </span>

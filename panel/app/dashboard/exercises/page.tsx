@@ -117,7 +117,7 @@ function ExerciseList({
         <li key={e.id}>
           <Link
             href={`/dashboard/exercises/${e.id}`}
-            className="glass-input flex items-center justify-between rounded-2xl px-4 py-3 text-[15px] transition-colors hover:border-white/25"
+            className="glass-input flex items-center justify-between rounded-2xl px-4 py-3 text-[15px] transition-colors hover:border-border-strong"
           >
             <span>
               {e.nombre_canonico}

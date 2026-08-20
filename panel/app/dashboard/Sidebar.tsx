@@ -4,11 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import ThemeToggle from "../ThemeToggle";
+import { ICONS, type IconKey } from "./icons";
 
 export interface NavItem {
   href: string;
   label: string;
   grupo: "entrenamiento" | "gestion" | "negocio";
+  icon: IconKey;
 }
 
 const GRUPOS: { id: NavItem["grupo"]; titulo: string }[] = [
@@ -47,22 +50,26 @@ export default function Sidebar({
               {grupo.titulo}
             </p>
             <ul className="flex flex-col gap-0.5">
-              {delGrupo.map((item) => (
+              {delGrupo.map((item) => {
+                const Icono = ICONS[item.icon];
+                return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
                     onClick={() => setAbierto(false)}
                     aria-current={activo(item.href) ? "page" : undefined}
-                    className={`block rounded-xl px-3 py-2 text-[15px] transition-colors ${
+                    className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-[15px] transition-colors ${
                       activo(item.href)
-                        ? "bg-white/10 font-medium text-foreground"
-                        : "text-muted hover:bg-white/5 hover:text-foreground"
+                        ? "bg-active font-medium text-foreground"
+                        : "text-muted hover:bg-hover hover:text-foreground"
                     }`}
                   >
-                    {item.label}
+                    <Icono className="shrink-0" />
+                    <span>{item.label}</span>
                   </Link>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         );
@@ -77,10 +84,12 @@ export default function Sidebar({
         <div className="flex min-w-0 items-center gap-3">
           {/* El wordmark es apaisado (2.11:1); acá va chico para no estirar la
               barra, y la marca de la org al lado separada por un divisor. */}
-          <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={82} height={39} priority />
-          <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+          <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={82} height={39} priority className="logo-kayroz" />
+          <span className="h-4 w-px shrink-0 bg-divider" aria-hidden="true" />
           <span className="truncate text-[15px] font-semibold tracking-tight">{marca}</span>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+        <ThemeToggle compact />
         <button
           type="button"
           onClick={() => setAbierto((v) => !v)}
@@ -90,12 +99,13 @@ export default function Sidebar({
         >
           {abierto ? "✕" : "☰"}
         </button>
+        </div>
       </header>
 
       {abierto && (
         <div
           onClick={() => setAbierto(false)}
-          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+          className="fixed inset-0 z-30 bg-scrim lg:hidden"
           aria-hidden="true"
         />
       )}
@@ -110,20 +120,23 @@ export default function Sidebar({
             apiladas porque el wordmark es apaisado y al lado del nombre no
             entraría en 256px. */}
         <Link href="/dashboard" className="mb-8 flex flex-col gap-2 px-3">
-          <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={132} height={63} priority />
+          <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={132} height={63} priority className="logo-kayroz" />
           <span className="truncate text-[15px] font-semibold tracking-tight">{marca}</span>
         </Link>
 
         {nav}
 
-        <form action={signOut} className="mt-auto pt-6">
-          <button
-            type="submit"
-            className="w-full rounded-xl px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-white/5 hover:text-foreground"
-          >
-            Cerrar sesión
-          </button>
-        </form>
+        <div className="mt-auto flex flex-col gap-0.5 pt-6">
+          <ThemeToggle />
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="w-full rounded-xl px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-foreground"
+            >
+              Cerrar sesión
+            </button>
+          </form>
+        </div>
       </aside>
     </>
   );

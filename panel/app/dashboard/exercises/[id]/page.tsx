@@ -46,7 +46,7 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
           <img
             src={imagenSrc}
             alt={exercise.nombre_canonico}
-            className="mb-4 max-h-64 rounded-2xl border border-white/10 object-contain"
+            className="mb-4 max-h-64 rounded-2xl border border-divider object-contain"
           />
         ) : (
           <p className="mb-4 text-sm text-muted">Sin foto todavía.</p>
@@ -70,7 +70,7 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
       <section className="glass rounded-3xl p-7 sm:p-8">
         <h2 className="mb-5 text-lg font-semibold tracking-tight">Video de técnica</h2>
         {videoSrc ? (
-          <video src={videoSrc} controls playsInline className="mb-4 max-h-80 w-full rounded-2xl border border-white/10" />
+          <video src={videoSrc} controls playsInline className="mb-4 max-h-80 w-full rounded-2xl border border-divider" />
         ) : (
           <p className="mb-4 text-sm text-muted">Sin video todavía.</p>
         )}

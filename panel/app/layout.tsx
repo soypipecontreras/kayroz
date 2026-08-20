@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import ThemeScript from "./ThemeScript";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -38,10 +39,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased`}
       >
+        <ThemeScript />
         {children}
       </body>
     </html>

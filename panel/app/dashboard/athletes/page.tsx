@@ -86,7 +86,7 @@ export default async function AthletesPage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-left text-muted">
+                <tr className="border-b border-divider text-left text-muted">
                   <th className="pb-3 font-normal">Nombre</th>
                   {org.tipo === "gimnasio" && <th className="pb-3 font-normal">Sede</th>}
                   <th className="pb-3 font-normal">Membresía</th>
@@ -101,12 +101,12 @@ export default async function AthletesPage({
                   return (
                     <tr
                       key={a.id}
-                      className="border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]"
+                      className="border-b border-divider-soft transition-colors last:border-0 hover:bg-hover"
                     >
                       <td className="py-3.5">
                         <Link
                           href={`/dashboard/athletes/${a.id}`}
-                          className="font-medium underline underline-offset-4 transition-colors hover:text-white"
+                          className="font-medium underline underline-offset-4 transition-colors hover:text-foreground"
                         >
                           {a.nombre || "Sin nombre"}
                         </Link>
@@ -139,7 +139,7 @@ export default async function AthletesPage({
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-semibold tracking-tight">Códigos de invitación</h2>
           <form action={generateInviteCode}>
-            <button type="submit" className="glass-input rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:border-white/40">
+            <button type="submit" className="glass-input rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:border-border-strong">
               Generar código
             </button>
           </form>

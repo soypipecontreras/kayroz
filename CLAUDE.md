@@ -167,6 +167,37 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
     las policies; esto evita mostrar puertas cerradas.
   - `getOrgContext()` (`panel/lib/org.ts`) es el único lugar donde el panel resuelve quién sos:
     devuelve org + rol, y si no sos staff te manda a `/app` o `/onboarding` según corresponda.
+- ✅ **Tema claro/oscuro, íconos y web pública por org (Fase E)**
+  - **Dos temas**, oscuro por defecto y respetando `prefers-color-scheme` la primera vez. La
+    elección se guarda en `localStorage` y la aplica `app/ThemeScript.tsx`, un script inline
+    que corre **antes del primer paint** — desde un `useEffect` la página parpadearía en
+    oscuro antes de pasar a claro en cada carga. Todo lo que cambia entre temas vive como
+    variable CSS en `globals.css`: ningún componente debe escribir un `rgba()` a mano, si no
+    el modo claro se rompe de a pedazos (había 21 `border-white/10` y similares que en claro
+    quedaban invisibles; ahora son tokens `divider`, `hover`, `active`, `scrim`…).
+    **Ojo con los logos**: el wordmark y el isotipo son BLANCOS sobre transparente y la cabra
+    es NEGRA, así que se invierten al revés uno del otro (`--logo-filter` / `--cabra-filter`).
+  - **Íconos del menú** en `app/dashboard/icons.tsx`: SVG inline, monocromos
+    (`stroke="currentColor"`, heredan el color y funcionan en los dos temas), trazo 1.6 y
+    geometría simple — a 18px el detalle chico se empasta. Nada de emoji de colores.
+  - **Web pública por org**: `org_sites` (slug único, `publicado`, `bloques` jsonb) + editor
+    por bloques en `/dashboard/web` y página pública en `/g/[slug]`. Seis tipos de bloque
+    (portada, sobre, servicios, planes, galería, contacto), reordenables. Los **bloques van
+    como jsonb en una fila** y no en tabla aparte: se editan y guardan todos juntos, el orden
+    es la posición en el array, y nunca hace falta consultar un bloque suelto. El bloque de
+    planes **no copia precios**: los lee en vivo de `membership_plans`, así cambiar un precio
+    actualiza la web sola. `lib/siteBlocks.ts` es la única fuente de verdad del formato y
+    `normalizarBloques()` sanea siempre lo que viene del jsonb — nunca confiar en su forma.
+    Bucket `site-media` **público** aparte de `coach-media` (privado): una web pública no
+    puede servir imágenes con URL que expira.
+- ⚠️ **Trampa de RLS con `anon`** (costó que la web pública no cargara para nadie sin sesión):
+  una policy que invoca `auth_org_id()` y no declara rol vale para `public`, o sea también
+  para `anon`. Postgres la evalúa igual, llama a la función, y como `anon` no tiene EXECUTE
+  **corta con "permission denied for function auth_org_id"** — el error gana antes de que la
+  policy pública devuelva nada. No filtra (falla cerrado) pero rompe la página.
+  **Regla: si una tabla tiene alguna policy para `anon`, todas sus otras policies deben
+  declarar `TO authenticated`.** No se detecta desde el navegador estando logueado: hay que
+  probar con `set local role anon`.
 - ⚠️ **Tres trampas que costaron un bug real cada una en esta migración** (leer antes de tocar
   el esquema):
   1. **`drop column` va después de borrar las policies que la referencian.** Postgres se niega

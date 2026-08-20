@@ -132,7 +132,7 @@ export default async function AthleteHomePage() {
                           <img
                             src={imagen}
                             alt=""
-                            className="h-16 w-16 shrink-0 rounded-xl border border-white/10 object-cover"
+                            className="h-16 w-16 shrink-0 rounded-xl border border-divider object-cover"
                           />
                         )}
                         <div className="min-w-0 flex-1">
@@ -163,7 +163,7 @@ export default async function AthleteHomePage() {
                             controls
                             playsInline
                             preload="none"
-                            className="mt-2 w-full rounded-xl border border-white/10"
+                            className="mt-2 w-full rounded-xl border border-divider"
                           />
                         </details>
                       )}

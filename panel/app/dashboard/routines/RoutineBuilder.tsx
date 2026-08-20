@@ -137,7 +137,7 @@ export default function RoutineBuilder({
                 <button
                   type="button"
                   onClick={() => addExercise(e)}
-                  className="glass-input flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-[15px] transition-colors hover:border-white/40"
+                  className="glass-input flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-[15px] transition-colors hover:border-border-strong"
                 >
                   <span>
                     {e.nombre_canonico}

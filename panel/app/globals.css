@@ -2,17 +2,99 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Identidad Kayroz: negro/blanco, filosa, sin modo claro — el logo (ver
-   public/brand/) está pensado para fondo negro, no es un tema que se adapte
-   a prefers-color-scheme como el resto de una app genérica. */
-:root {
-  /* Negro puro: los PNG del logo (public/brand/) traen fondo #000000
-     horneado — cualquier otro tono deja un rectángulo visible alrededor. */
+/* Identidad Kayroz: monocromática y filosa. Dos temas, oscuro por defecto.
+   Todo lo que cambia entre temas vive acá como variable — ningún componente
+   debería escribir un rgba() a mano, si no el modo claro se rompe de a pedazos.
+
+   Ojo con los logos: el wordmark y el isotipo son BLANCOS sobre transparente,
+   así que sobre fondo claro desaparecen; la cabra es negra sobre transparente,
+   al revés. Por eso `--logo-filter` y `--cabra-filter` se invierten según el
+   tema (ver .logo-kayroz / .logo-cabra abajo). */
+:root,
+:root[data-theme="dark"] {
   --background: #000000;
   --surface: #111111;
   --border: #262626;
   --foreground: #f5f5f5;
   --muted: #8a8a8a;
+
+  /* Vidrio */
+  --glass-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.025) 60%);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-shadow: 0 25px 70px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 0 60px rgba(255, 255, 255, 0.025);
+  --glass-input-bg: rgba(255, 255, 255, 0.06);
+  --glass-input-bg-focus: rgba(255, 255, 255, 0.1);
+  --glass-input-border-hover: rgba(255, 255, 255, 0.22);
+  --glass-input-border-focus: rgba(255, 255, 255, 0.4);
+  --glass-input-ring: rgba(255, 255, 255, 0.07);
+  --glass-nav-bg: rgba(0, 0, 0, 0.6);
+  --glass-nav-border: rgba(255, 255, 255, 0.1);
+
+  /* Resplandores del fondo: claros sobre negro. */
+  --glow-color: rgba(255, 255, 255, 0.11);
+  --glow-color-2: rgba(255, 255, 255, 0.08);
+  --glow-color-3: rgba(255, 255, 255, 0.09);
+
+  /* CTA sólido: el punto de máximo contraste. */
+  --btn-bg: #fff;
+  --btn-fg: #000;
+  --btn-shadow: 0 8px 24px rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --btn-shadow-hover: 0 10px 30px rgba(255, 255, 255, 0.18), 0 2px 8px rgba(0, 0, 0, 0.4);
+
+  /* Estado activo del menú y separadores. */
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --active-bg: rgba(255, 255, 255, 0.1);
+  --divider: rgba(255, 255, 255, 0.1);
+  --divider-soft: rgba(255, 255, 255, 0.05);
+
+  --scrim: rgba(0, 0, 0, 0.6);
+  /* Velo sobre la cabra en las pantallas de auth: oscurece en tema oscuro,
+     aclara en tema claro. Sin esto el contraste del texto se pierde. */
+  --auth-veil: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.65));
+  --logo-filter: none; /* el logo ya es blanco */
+  --cabra-filter: invert(1); /* la cabra es negra: hay que blanquearla */
+}
+
+:root[data-theme="light"] {
+  /* Blanco puro + vidrio se ve sucio: un gris muy claro da un fondo donde el
+     blur tiene algo que refractar. */
+  --background: #f2f2f0;
+  --surface: #ffffff;
+  --border: #d8d8d4;
+  --foreground: #0a0a0a;
+  --muted: #6b6b6b;
+
+  --glass-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.55) 60%);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-shadow: 0 20px 50px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --glass-input-bg: rgba(255, 255, 255, 0.7);
+  --glass-input-bg-focus: rgba(255, 255, 255, 0.95);
+  --glass-input-border-hover: rgba(0, 0, 0, 0.2);
+  --glass-input-border-focus: rgba(0, 0, 0, 0.45);
+  --glass-input-ring: rgba(0, 0, 0, 0.07);
+  --glass-nav-bg: rgba(255, 255, 255, 0.7);
+  --glass-nav-border: rgba(0, 0, 0, 0.08);
+
+  --glow-color: rgba(0, 0, 0, 0.05);
+  --glow-color-2: rgba(0, 0, 0, 0.035);
+  --glow-color-3: rgba(0, 0, 0, 0.045);
+
+  --btn-bg: #0a0a0a;
+  --btn-fg: #fff;
+  --btn-shadow: 0 8px 24px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.1);
+  --btn-shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(0, 0, 0, 0.08);
+  --divider: rgba(0, 0, 0, 0.1);
+  --divider-soft: rgba(0, 0, 0, 0.06);
+
+  --scrim: rgba(0, 0, 0, 0.35);
+  --auth-veil: linear-gradient(to bottom, rgba(242,242,240,0.75), rgba(242,242,240,0.35) 50%, rgba(242,242,240,0.75));
+  --logo-filter: invert(1); /* el logo es blanco: hay que ennegrecerlo */
+  --cabra-filter: none; /* la cabra ya es negra */
 }
 
 body {
@@ -22,9 +104,9 @@ body {
      que se sienta "líquido" en vez de una foto fija — sin esto el
      backdrop-blur de los paneles no tiene nada que refractar. */
   background-image:
-    radial-gradient(ellipse 1200px 900px at 18% -10%, rgba(255, 255, 255, 0.11), transparent 55%),
-    radial-gradient(ellipse 1000px 1000px at 100% 15%, rgba(255, 255, 255, 0.08), transparent 55%),
-    radial-gradient(ellipse 1100px 1100px at 42% 120%, rgba(255, 255, 255, 0.09), transparent 55%);
+    radial-gradient(ellipse 1200px 900px at 18% -10%, var(--glow-color), transparent 55%),
+    radial-gradient(ellipse 1000px 1000px at 100% 15%, var(--glow-color-2), transparent 55%),
+    radial-gradient(ellipse 1100px 1100px at 42% 120%, var(--glow-color-3), transparent 55%);
   background-attachment: fixed;
   background-repeat: no-repeat;
   min-height: 100vh;
@@ -40,9 +122,28 @@ body {
   }
 }
 
+/* Quien pidió menos movimiento no debería tener un fondo animado eternamente. */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    animation: none;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Los logos vienen en un solo color y se adaptan por filtro, no por tener
+     dos archivos distintos. */
+  .logo-kayroz {
+    filter: var(--logo-filter);
+  }
+  .logo-cabra {
+    filter: var(--cabra-filter);
+  }
+  .auth-veil {
+    background: var(--auth-veil);
   }
 }
 
@@ -52,24 +153,20 @@ body {
      inset-highlight brillante en el borde superior — sin estos tres juntos
      el blur se ve como una mancha gris, no como un material real. */
   .glass {
-    background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.025) 60%);
+    background: var(--glass-bg);
     backdrop-filter: blur(40px) saturate(180%);
     -webkit-backdrop-filter: blur(40px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow:
-      0 25px 70px rgba(0, 0, 0, 0.6),
-      0 2px 10px rgba(0, 0, 0, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2),
-      inset 0 0 60px rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
 
   /* Igual pero más discreto — para inputs y elementos chicos donde un blur
      tan fuerte como .glass se vuelve ruidoso. */
   .glass-input {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--glass-input-bg);
     backdrop-filter: blur(18px) saturate(160%);
     -webkit-backdrop-filter: blur(18px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid var(--glass-border);
     transition:
       background-color 0.2s ease,
       border-color 0.2s ease,
@@ -77,33 +174,30 @@ body {
   }
 
   .glass-input:focus {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.07);
+    background: var(--glass-input-bg-focus);
+    border-color: var(--glass-input-border-focus);
+    box-shadow: 0 0 0 4px var(--glass-input-ring);
   }
 
   .glass-input:hover {
-    border-color: rgba(255, 255, 255, 0.22);
+    border-color: var(--glass-input-border-hover);
   }
 
   /* Barra de navegación: mismo material que .glass pero sin las sombras de
-     "objeto flotante" — se funde con el borde inferior en vez de flotar. */
+     "objeto flotante" — se funde con el borde en vez de flotar. */
   .glass-nav {
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--glass-nav-bg);
     backdrop-filter: blur(28px) saturate(180%);
     -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--glass-nav-border);
   }
 
   /* CTA sólido: el único elemento sin vidrio a propósito — necesita ser el
-     punto de máximo contraste de la pantalla. El glow blanco debajo lo
-     hace sentir "elevado" en vez de plano. */
+     punto de máximo contraste de la pantalla. */
   .btn-primary {
-    background: #fff;
-    color: #000;
-    box-shadow:
-      0 8px 24px rgba(255, 255, 255, 0.12),
-      0 2px 8px rgba(0, 0, 0, 0.4);
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    box-shadow: var(--btn-shadow);
     transition:
       transform 0.15s ease,
       box-shadow 0.15s ease,
@@ -111,9 +205,7 @@ body {
   }
 
   .btn-primary:hover {
-    box-shadow:
-      0 10px 30px rgba(255, 255, 255, 0.18),
-      0 2px 8px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--btn-shadow-hover);
     transform: translateY(-1px);
   }
 

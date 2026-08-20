@@ -31,14 +31,14 @@ export default async function OnboardingPage({
           src="/brand/kayroz-cabra.png"
           alt=""
           fill
-          className="invert object-cover object-center opacity-[0.5]"
+          className="logo-cabra object-cover object-center opacity-[0.5]"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/15 to-black/65" />
+        <div className="auth-veil absolute inset-0" />
       </div>
 
       <div className="glass relative z-10 w-full max-w-md rounded-[28px] p-10 sm:p-12">
-        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={95} className="mb-10" />
+        <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={95} className="logo-kayroz mb-10" />
         <h1 className="mb-2 text-2xl font-semibold tracking-tight">Contanos de vos</h1>
         <p className="mb-8 text-sm text-muted">Con esto arrancamos tu cuenta (trial de 14 días).</p>
         <OnboardingForm error={error} />

@@ -37,7 +37,7 @@ export default function OnboardingForm({ error }: { error?: string }) {
             onClick={() => setTipo(o.tipo)}
             aria-pressed={tipo === o.tipo}
             className={`glass-input rounded-2xl px-4 py-3 text-left transition-colors ${
-              tipo === o.tipo ? "border-white/50" : "hover:border-white/30"
+              tipo === o.tipo ? "border-divider-soft0" : "hover:border-border-strong"
             }`}
           >
             <span className="block text-[15px] font-medium">{o.titulo}</span>

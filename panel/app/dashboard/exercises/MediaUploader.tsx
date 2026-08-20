@@ -97,7 +97,7 @@ export default function MediaUploader({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
-        <label className="glass-input cursor-pointer rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:border-white/40">
+        <label className="glass-input cursor-pointer rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:border-border-strong">
           {busy ? "Subiendo…" : currentPath ? `Cambiar ${kind}` : `Subir ${kind}`}
           <input
             ref={inputRef}

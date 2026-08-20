@@ -92,7 +92,7 @@ export default async function FinanzasPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-left text-muted">
+                <tr className="border-b border-divider text-left text-muted">
                   <th className="pb-3 font-normal">Fecha</th>
                   <th className="pb-3 font-normal">Concepto</th>
                   <th className="pb-3 font-normal">Quién</th>
@@ -104,7 +104,7 @@ export default async function FinanzasPage() {
                 {pagos.map((p) => {
                   const atleta = Array.isArray(p.athletes) ? p.athletes[0] : p.athletes;
                   return (
-                    <tr key={p.id} className="border-b border-white/5 last:border-0">
+                    <tr key={p.id} className="border-b border-divider-soft last:border-0">
                       <td className="py-3 text-muted">{p.fecha}</td>
                       <td className="py-3">
                         {CONCEPTO_LABEL[p.concepto] ?? p.concepto}
