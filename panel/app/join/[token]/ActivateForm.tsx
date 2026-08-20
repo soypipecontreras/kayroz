@@ -12,6 +12,9 @@ export default function ActivateForm({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [checkEmail, setCheckEmail] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Cuando el email ya tiene cuenta, la contraseña que pide deja de ser "creá
+  // una" y pasa a ser "poné la tuya": hay que decirlo, si no parece un error.
+  const [modoIngreso, setModoIngreso] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,15 +22,44 @@ export default function ActivateForm({ token }: { token: string }) {
     setLoading(true);
 
     const supabase = createClient();
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
 
-    if (signUpError) {
+    // El link tiene que servir para las dos cosas: crear la cuenta la primera
+    // vez, y entrar si ya existe. Antes solo hacía signUp, así que si alguien
+    // se registraba y la vinculación fallaba (o simplemente ya tenía cuenta),
+    // quedaba trabado para siempre: no podía registrarse porque el email estaba
+    // tomado, ni entrar porque nunca se vinculó.
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+
+    const yaTieneCuenta =
+      signUpError?.message.includes("already registered") ||
+      signUpError?.message.includes("User already registered");
+
+    if (signUpError && !yaTieneCuenta) {
       setLoading(false);
-      setError(signUpError.message.includes("already registered") ? "Ese email ya tiene cuenta." : signUpError.message);
+      setError(signUpError.message);
       return;
     }
 
-    if (!data.session) {
+    let sesion = signUpData?.session ?? null;
+
+    if (yaTieneCuenta) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) {
+        setLoading(false);
+        setModoIngreso(true);
+        setError(
+          "Ese email ya tiene una cuenta. Escribí la contraseña que usaste, y con eso entrás.",
+        );
+        return;
+      }
+      sesion = signInData.session;
+    }
+
+    // Sin sesión es porque el proyecto exige confirmar el email primero.
+    if (!sesion) {
       setLoading(false);
       setCheckEmail(true);
       return;
@@ -49,8 +81,8 @@ export default function ActivateForm({ token }: { token: string }) {
       <div>
         <h2 className="mb-2 text-lg font-semibold tracking-tight">Revisá tu correo</h2>
         <p className="text-sm text-muted">
-          Te mandamos un link de confirmación a {email}. Cuando lo abras, volvé a este link para terminar de
-          activar tu cuenta.
+          Te mandamos un link de confirmación a {email}. Cuando lo abras, volvé a este link para
+          terminar de activar tu cuenta.
         </p>
       </div>
     );
@@ -70,7 +102,7 @@ export default function ActivateForm({ token }: { token: string }) {
         type="password"
         required
         minLength={6}
-        placeholder="Contraseña (mínimo 6 caracteres)"
+        placeholder={modoIngreso ? "Tu contraseña" : "Contraseña (mínimo 6 caracteres)"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         className="glass-input rounded-2xl px-4 py-3.5 text-[15px] text-foreground outline-none placeholder:text-muted"
@@ -81,7 +113,7 @@ export default function ActivateForm({ token }: { token: string }) {
         disabled={loading}
         className="btn-primary mt-2 rounded-2xl px-4 py-3.5 text-[15px] font-semibold disabled:opacity-50"
       >
-        {loading ? "Activando..." : "Activar cuenta"}
+        {loading ? "Entrando..." : modoIngreso ? "Entrar" : "Activar cuenta"}
       </button>
     </form>
   );

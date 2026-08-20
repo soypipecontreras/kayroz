@@ -74,9 +74,12 @@ export default function Sidebar({
     <>
       {/* Barra superior: solo en mobile, para abrir el menú */}
       <header className="glass-nav sticky top-0 z-30 flex items-center justify-between px-5 py-4 lg:hidden">
-        <div className="flex items-center gap-3">
-          <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={26} height={28} />
-          <span className="text-[15px] font-semibold tracking-tight">{marca}</span>
+        <div className="flex min-w-0 items-center gap-3">
+          {/* El wordmark es apaisado (2.11:1); acá va chico para no estirar la
+              barra, y la marca de la org al lado separada por un divisor. */}
+          <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={82} height={39} priority />
+          <span className="h-4 w-px shrink-0 bg-white/20" aria-hidden="true" />
+          <span className="truncate text-[15px] font-semibold tracking-tight">{marca}</span>
         </div>
         <button
           type="button"
@@ -102,9 +105,13 @@ export default function Sidebar({
           abierto ? "flex translate-x-0" : "hidden -translate-x-full"
         }`}
       >
-        <Link href="/dashboard" className="mb-8 flex items-center gap-3 px-3">
-          <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={28} height={30} />
-          <span className="text-[15px] font-semibold tracking-tight">{marca}</span>
+        {/* Kayroz (la plataforma) arriba y la marca de la org abajo: son dos
+            identidades que conviven a propósito (ver §0 de CLAUDE.md). Van
+            apiladas porque el wordmark es apaisado y al lado del nombre no
+            entraría en 256px. */}
+        <Link href="/dashboard" className="mb-8 flex flex-col gap-2 px-3">
+          <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={132} height={63} priority />
+          <span className="truncate text-[15px] font-semibold tracking-tight">{marca}</span>
         </Link>
 
         {nav}

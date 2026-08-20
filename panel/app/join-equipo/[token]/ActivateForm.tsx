@@ -12,6 +12,7 @@ export default function ActivateForm({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [checkEmail, setCheckEmail] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [modoIngreso, setModoIngreso] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,19 +20,39 @@ export default function ActivateForm({ token }: { token: string }) {
     setLoading(true);
 
     const supabase = createClient();
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
 
-    if (signUpError) {
+    // Mismo criterio que /join/[token]: el link sirve para crear la cuenta o
+    // para entrar si ya existe. Si solo hiciera signUp, alguien con cuenta
+    // previa quedaría trabado sin forma de activar su acceso.
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+
+    const yaTieneCuenta =
+      signUpError?.message.includes("already registered") ||
+      signUpError?.message.includes("User already registered");
+
+    if (signUpError && !yaTieneCuenta) {
       setLoading(false);
-      setError(
-        signUpError.message.includes("already registered")
-          ? "Ese email ya tiene cuenta."
-          : signUpError.message,
-      );
+      setError(signUpError.message);
       return;
     }
 
-    if (!data.session) {
+    let sesion = signUpData?.session ?? null;
+
+    if (yaTieneCuenta) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) {
+        setLoading(false);
+        setModoIngreso(true);
+        setError("Ese email ya tiene una cuenta. Escribí la contraseña que usaste, y con eso entrás.");
+        return;
+      }
+      sesion = signInData.session;
+    }
+
+    if (!sesion) {
       setLoading(false);
       setCheckEmail(true);
       return;
@@ -74,7 +95,7 @@ export default function ActivateForm({ token }: { token: string }) {
         type="password"
         required
         minLength={6}
-        placeholder="Contraseña (mínimo 6 caracteres)"
+        placeholder={modoIngreso ? "Tu contraseña" : "Contraseña (mínimo 6 caracteres)"}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         className="glass-input rounded-2xl px-4 py-3.5 text-[15px] text-foreground outline-none placeholder:text-muted"
@@ -85,7 +106,7 @@ export default function ActivateForm({ token }: { token: string }) {
         disabled={loading}
         className="btn-primary mt-2 rounded-2xl px-4 py-3.5 text-[15px] font-semibold disabled:opacity-50"
       >
-        {loading ? "Activando..." : "Activar acceso"}
+        {loading ? "Entrando..." : modoIngreso ? "Entrar" : "Activar acceso"}
       </button>
     </form>
   );
