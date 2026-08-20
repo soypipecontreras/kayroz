@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createCoachProfile } from "./actions";
+import OnboardingForm from "./OnboardingForm";
 
 export default async function OnboardingPage({
   searchParams,
@@ -16,12 +16,13 @@ export default async function OnboardingPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: existingCoach } = await supabase
-    .from("coaches")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (existingCoach) redirect("/dashboard");
+  // Ya tiene org (staff) o ya es atleta de alguien: no hay nada que crear.
+  const [{ data: membership }, { data: athlete }] = await Promise.all([
+    supabase.from("memberships").select("id").eq("auth_user_id", user.id).maybeSingle(),
+    supabase.from("athletes").select("id").eq("auth_user_id", user.id).maybeSingle(),
+  ]);
+  if (membership) redirect("/dashboard");
+  if (athlete) redirect("/app");
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-16">
@@ -39,29 +40,8 @@ export default async function OnboardingPage({
       <div className="glass relative z-10 w-full max-w-md rounded-[28px] p-10 sm:p-12">
         <Image src="/brand/kayroz-wordmark.png" alt="Kayroz" width={200} height={95} className="mb-10" />
         <h1 className="mb-2 text-2xl font-semibold tracking-tight">Contanos de vos</h1>
-        <p className="mb-8 text-sm text-muted">Con esto arrancamos tu cuenta de coach (trial de 14 días).</p>
-
-        <form action={createCoachProfile} className="flex flex-col gap-4">
-          <input
-            name="nombre"
-            placeholder="Tu nombre"
-            className="glass-input rounded-2xl px-4 py-3.5 text-[15px] text-foreground outline-none placeholder:text-muted"
-          />
-          <input
-            name="marca"
-            placeholder="Nombre de tu marca (lo ven tus atletas)"
-            className="glass-input rounded-2xl px-4 py-3.5 text-[15px] text-foreground outline-none placeholder:text-muted"
-          />
-          <input
-            name="telefono"
-            placeholder="Teléfono (opcional, +57...)"
-            className="glass-input rounded-2xl px-4 py-3.5 text-[15px] text-foreground outline-none placeholder:text-muted"
-          />
-          {error && <p className="text-sm text-red-400">No pudimos guardar: {error}</p>}
-          <button type="submit" className="btn-primary mt-2 rounded-2xl px-4 py-3.5 text-[15px] font-semibold">
-            Empezar
-          </button>
-        </form>
+        <p className="mb-8 text-sm text-muted">Con esto arrancamos tu cuenta (trial de 14 días).</p>
+        <OnboardingForm error={error} />
       </div>
     </div>
   );

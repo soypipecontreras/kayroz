@@ -11,15 +11,15 @@ export interface ResolvedExercise {
 
 export async function resolveExercise(
   supabase: SupabaseClient,
-  coachId: string,
+  orgId: string,
   exerciseText: string,
 ): Promise<ResolvedExercise | null> {
   const target = normalizeForMatch(exerciseText);
 
   const { data: exercises, error: exercisesError } = await supabase
     .from('exercises')
-    .select('id, nombre_canonico, tipo, instrucciones, imagen_url, es_global, coach_id')
-    .or(`es_global.eq.true,coach_id.eq.${coachId}`);
+    .select('id, nombre_canonico, tipo, instrucciones, imagen_url, es_global, org_id')
+    .or(`es_global.eq.true,org_id.eq.${orgId}`);
   if (exercisesError) throw exercisesError;
   if (!exercises || exercises.length === 0) return null;
 

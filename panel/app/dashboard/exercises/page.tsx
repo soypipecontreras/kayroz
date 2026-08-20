@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/org";
 import { createExercise } from "./actions";
 
 const GRUPOS_MUSCULARES = ["pecho", "espalda", "hombro", "biceps", "triceps", "pierna", "gluteo", "core", "cardio", "otro"];
@@ -14,17 +14,8 @@ export default async function ExercisesPage({
   const supabase = await createClient();
   const { error } = await searchParams;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!coach) redirect("/onboarding");
+  // Solo para exigir sesión y org: la lista sale por RLS.
+  await getOrgContext(supabase);
 
   const { data: exercises } = await supabase
     .from("exercises")

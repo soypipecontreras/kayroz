@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/org";
 import RoutineBuilder, { type BuilderItem } from "../RoutineBuilder";
 import { updateTemplate, deleteTemplate } from "../actions";
 
@@ -27,10 +28,7 @@ export default async function EditRoutineTemplatePage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  await getOrgContext(supabase);
 
   const { data: template } = await supabase
     .from("routine_templates")

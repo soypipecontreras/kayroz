@@ -4,7 +4,7 @@
 // esta forma y mandar `BotReply` de vuelta con su propia API de mensajería.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { resolveIdentity } from './identity.ts';
-import { createCoach, createInviteCode, redeemInviteCode, type AppCoach } from './coaches.ts';
+import { createOrg, createInviteCode, redeemInviteCode, type AppOrg } from './coaches.ts';
 import { createAthleteFromInvite, type AppAthlete } from './athletes.ts';
 import { resolveExercise } from './exercises.ts';
 import { getOrCreateActiveWorkout, insertSets } from './workouts.ts';
@@ -123,7 +123,7 @@ export interface BotReply {
 // ============================================================
 // Atleta: registrar series, rutinas, consultas — mismo comportamiento que
 // el prototipo single-tenant, ahora resolviendo ejercicios contra el
-// catálogo del coach del atleta en vez de un catálogo propio.
+// catálogo de la org del atleta en vez de un catálogo propio.
 // ============================================================
 
 async function handleLogMessage(
@@ -135,7 +135,7 @@ async function handleLogMessage(
   const split = splitExerciseAndNumbers(parseInput);
   if (!split) return noEntendiText();
 
-  const exercise = await resolveExercise(supabase, athlete.coach_id, split.exerciseText);
+  const exercise = await resolveExercise(supabase, athlete.org_id, split.exerciseText);
   if (!exercise) return exerciseNotFoundText(split.exerciseText);
 
   const parsed = parseNumericExpression(split.numericText, exercise.tipo);
@@ -193,7 +193,7 @@ async function handleNuevaRutina(
     return { text: ROUTINE_MISSING_EXERCISES_TEXT };
   }
 
-  const results = await Promise.all(exerciseLines.map((line) => parseRoutineLine(supabase, athlete.coach_id, line)));
+  const results = await Promise.all(exerciseLines.map((line) => parseRoutineLine(supabase, athlete.org_id, line)));
   const failed = results.filter((r): r is FailedRoutineLine => !r.ok);
   if (failed.length > 0) {
     return { text: routineInvalidLinesText(failed) };
@@ -296,7 +296,7 @@ async function handleHowTo(supabase: SupabaseClient, athlete: AppAthlete, normal
 
   if (!candidate) return { text: noEntendiText() };
 
-  const exercise = await resolveExercise(supabase, athlete.coach_id, candidate);
+  const exercise = await resolveExercise(supabase, athlete.org_id, candidate);
   if (!exercise) return { text: exerciseNotFoundText(candidate) };
 
   const text = exercise.instrucciones
@@ -380,7 +380,7 @@ async function handleProgreso(supabase: SupabaseClient, athlete: AppAthlete, exe
   const query = exerciseQuery.trim();
   if (!query) return { text: PROGRESO_MISSING_EXERCISE_TEXT };
 
-  const exercise = await resolveExercise(supabase, athlete.coach_id, query);
+  const exercise = await resolveExercise(supabase, athlete.org_id, query);
   if (!exercise) return { text: exerciseNotFoundText(query) };
 
   const entries = await getExerciseProgress(supabase, athlete.id, exercise.id);
@@ -438,15 +438,15 @@ async function handleAthleteMessage(supabase: SupabaseClient, athlete: AppAthlet
 }
 
 // ============================================================
-// Coach: por ahora solo /invitar. El resto de comandos de coach
+// Org (gimnasio o entrenador): por ahora solo /invitar. El resto de comandos
 // (§6/§9 de CLAUDE.md) todavía no tiene lógica.
 // ============================================================
 
-async function handleCoachMessage(supabase: SupabaseClient, coach: AppCoach, texto: string): Promise<BotReply> {
+async function handleOrgMessage(supabase: SupabaseClient, org: AppOrg, texto: string): Promise<BotReply> {
   const commandLower = texto.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
 
   if (commandLower === '/invitar') {
-    const codigo = await createInviteCode(supabase, coach.id);
+    const codigo = await createInviteCode(supabase, org.id);
     return { text: newInviteCodeText(codigo) };
   }
 
@@ -454,7 +454,7 @@ async function handleCoachMessage(supabase: SupabaseClient, coach: AppCoach, tex
 }
 
 // ============================================================
-// Alta: quien escribe todavía no es ni coach ni atleta.
+// Alta: quien escribe todavía no es ni org ni atleta.
 // ============================================================
 
 async function handleUnknownSender(supabase: SupabaseClient, telefono: string, texto: string): Promise<BotReply> {
@@ -463,13 +463,13 @@ async function handleUnknownSender(supabase: SupabaseClient, telefono: string, t
   if (INVITE_CODE_RE.test(trimmed)) {
     const result = await redeemInviteCode(supabase, trimmed);
     if (!result.ok) return { text: inviteCodeInvalidText(result.reason) };
-    await createAthleteFromInvite(supabase, telefono, undefined, result.coachId);
+    await createAthleteFromInvite(supabase, telefono, undefined, result.orgId);
     return { text: athleteWelcomeText() };
   }
 
   if (trimmed.toLowerCase() === '/start') {
-    const coach = await createCoach(supabase, telefono, undefined);
-    const codigo = await createInviteCode(supabase, coach.id);
+    const org = await createOrg(supabase, telefono, undefined);
+    const codigo = await createInviteCode(supabase, org.id);
     return { text: coachWelcomeText(codigo) };
   }
 
@@ -486,7 +486,7 @@ export async function handleIncomingMessage(
   texto: string,
 ): Promise<BotReply> {
   const identity = await resolveIdentity(supabase, telefono);
-  if (identity.kind === 'coach') return handleCoachMessage(supabase, identity.coach, texto);
+  if (identity.kind === 'org') return handleOrgMessage(supabase, identity.org, texto);
   if (identity.kind === 'athlete') return handleAthleteMessage(supabase, identity.athlete, texto);
   return handleUnknownSender(supabase, telefono, texto);
 }

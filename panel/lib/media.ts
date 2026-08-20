@@ -36,10 +36,10 @@ export function extensionFor(mimeType: string): string {
 }
 
 // El primer segmento de la ruta es la frontera del tenant: las policies de
-// storage.objects comparan ese folder contra auth_coach_id(). Si esto cambia,
+// storage.objects comparan ese folder contra auth_org_id(). Si esto cambia,
 // hay que cambiar la migración también.
-export function buildMediaPath(coachId: string, mimeType: string): string {
-  return `${coachId}/${crypto.randomUUID()}.${extensionFor(mimeType)}`;
+export function buildMediaPath(orgId: string, mimeType: string): string {
+  return `${orgId}/${crypto.randomUUID()}.${extensionFor(mimeType)}`;
 }
 
 // Firma varias rutas de una sola vez. Las rutas nulas se ignoran, y el mapa

@@ -23,7 +23,7 @@ const LINE_RE = /^(.+?)\s+(\d+)\s*x\s*(amrap|\d+)$/i;
 
 export async function parseRoutineLine(
   supabase: SupabaseClient,
-  coachId: string,
+  orgId: string,
   line: string,
 ): Promise<ParsedRoutineLine | FailedRoutineLine> {
   const trimmed = line.trim();
@@ -31,7 +31,7 @@ export async function parseRoutineLine(
   if (!match) return { ok: false, raw: trimmed, reason: 'formato' };
 
   const [, exerciseText, seriesRaw, repsRaw] = match;
-  const exercise = await resolveExercise(supabase, coachId, exerciseText.trim());
+  const exercise = await resolveExercise(supabase, orgId, exerciseText.trim());
   if (!exercise) return { ok: false, raw: trimmed, reason: 'ejercicio_no_encontrado' };
 
   const isAmrap = repsRaw.toLowerCase() === 'amrap';

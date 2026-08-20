@@ -15,15 +15,15 @@ import {
 // El archivo va directo del navegador al Storage de Supabase, no a través de un
 // Server Action: un video de 50 MB por el server de Next sería lento y además
 // choca con el bodySizeLimit por defecto. RLS igual aplica — las policies del
-// bucket exigen que la ruta arranque con el coach_id del usuario logueado.
+// bucket exigen que la ruta arranque con el org_id del usuario logueado.
 export default function MediaUploader({
-  coachId,
+  orgId,
   kind,
   currentPath,
   onSave,
   onRemove,
 }: {
-  coachId: string;
+  orgId: string;
   kind: "imagen" | "video";
   currentPath: string | null;
   onSave: (path: string) => Promise<{ error?: string }>;
@@ -55,7 +55,7 @@ export default function MediaUploader({
 
     setBusy(true);
     const supabase = createClient();
-    const path = buildMediaPath(coachId, file.type);
+    const path = buildMediaPath(orgId, file.type);
 
     const { error: uploadError } = await supabase.storage
       .from(COACH_MEDIA_BUCKET)

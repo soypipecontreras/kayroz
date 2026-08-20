@@ -17,7 +17,7 @@ export default async function LogPage({
 
   const { data: athlete } = await supabase
     .from("athletes")
-    .select("id, coach_id, unidad_peso")
+    .select("id, org_id, unidad_peso")
     .eq("auth_user_id", user.id)
     .maybeSingle();
   if (!athlete) redirect("/login");
@@ -25,7 +25,7 @@ export default async function LogPage({
   const { data: exercises } = await supabase
     .from("exercises")
     .select("id, nombre_canonico")
-    .or(`es_global.eq.true,coach_id.eq.${athlete.coach_id}`)
+    .or(`es_global.eq.true,org_id.eq.${athlete.org_id}`)
     .order("nombre_canonico", { ascending: true });
 
   return (

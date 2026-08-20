@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAthlete } from "./actions";
 
+const LINKS = [
+  { href: "/app", label: "Hoy" },
+  { href: "/app/log", label: "Cargar" },
+  { href: "/app/historial", label: "Historial" },
+  { href: "/app/prs", label: "PRs" },
+];
+
 export default async function AthletePortalLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
 
@@ -14,12 +21,24 @@ export default async function AthletePortalLayout({ children }: { children: Reac
 
   const { data: athlete } = await supabase
     .from("athletes")
-    .select("nombre, coaches(marca, nombre)")
+    .select("nombre, organizations(marca, nombre)")
     .eq("auth_user_id", user.id)
     .maybeSingle();
-  if (!athlete) redirect("/login");
 
-  const coach = Array.isArray(athlete.coaches) ? athlete.coaches[0] : athlete.coaches;
+  if (!athlete) {
+    // No es atleta. Puede ser staff (su lugar es el panel) o alguien recién
+    // registrado que todavía no armó su cuenta. Mandarlo a /login sería un
+    // rebote, porque sesión ya tiene.
+    const { data: membership } = await supabase
+      .from("memberships")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .eq("estado", "activo")
+      .maybeSingle();
+    redirect(membership ? "/dashboard" : "/onboarding");
+  }
+
+  const org = Array.isArray(athlete.organizations) ? athlete.organizations[0] : athlete.organizations;
 
   return (
     <div className="min-h-screen">
@@ -27,42 +46,33 @@ export default async function AthletePortalLayout({ children }: { children: Reac
         <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-5">
             <Image src="/brand/kayroz-mark.png" alt="Kayroz" width={30} height={32} />
-            <span className="text-[15px] font-semibold tracking-tight">{coach?.marca || coach?.nombre || "Kayroz"}</span>
+            <span className="text-[15px] font-semibold tracking-tight">
+              {org?.marca || org?.nombre || "Kayroz"}
+            </span>
             <nav className="ml-3 hidden gap-6 text-sm text-muted sm:flex">
-              <Link href="/app" className="transition-colors hover:text-foreground">
-                Hoy
-              </Link>
-              <Link href="/app/log" className="transition-colors hover:text-foreground">
-                Cargar
-              </Link>
-              <Link href="/app/historial" className="transition-colors hover:text-foreground">
-                Historial
-              </Link>
-              <Link href="/app/prs" className="transition-colors hover:text-foreground">
-                PRs
-              </Link>
+              {LINKS.map((l) => (
+                <Link key={l.href} href={l.href} className="transition-colors hover:text-foreground">
+                  {l.label}
+                </Link>
+              ))}
             </nav>
           </div>
           <form action={signOutAthlete}>
-            <button type="submit" className="text-sm text-muted underline underline-offset-4 transition-colors hover:text-foreground">
+            <button
+              type="submit"
+              className="text-sm text-muted underline underline-offset-4 transition-colors hover:text-foreground"
+            >
               Cerrar sesión
             </button>
           </form>
         </div>
       </header>
       <nav className="mx-auto flex max-w-2xl gap-5 px-6 pt-4 text-sm text-muted sm:hidden">
-        <Link href="/app" className="transition-colors hover:text-foreground">
-          Hoy
-        </Link>
-        <Link href="/app/log" className="transition-colors hover:text-foreground">
-          Cargar
-        </Link>
-        <Link href="/app/historial" className="transition-colors hover:text-foreground">
-          Historial
-        </Link>
-        <Link href="/app/prs" className="transition-colors hover:text-foreground">
-          PRs
-        </Link>
+        {LINKS.map((l) => (
+          <Link key={l.href} href={l.href} className="transition-colors hover:text-foreground">
+            {l.label}
+          </Link>
+        ))}
       </nav>
       <main className="mx-auto max-w-2xl px-6 py-10">{children}</main>
       <footer className="mx-auto max-w-2xl px-6 pb-10 text-xs text-muted">Kayroz</footer>

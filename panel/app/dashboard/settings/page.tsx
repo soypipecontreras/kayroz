@@ -1,6 +1,12 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { updateCoachProfile } from "./actions";
+import { getOrgContext, esDueno } from "@/lib/org";
+import { updateOrgProfile } from "./actions";
+
+const TIPO_LABEL: Record<string, string> = {
+  gimnasio: "Gimnasio",
+  entrenador: "Entrenador independiente",
+  individual: "Cuenta personal",
+};
 
 export default async function SettingsPage({
   searchParams,
@@ -9,51 +15,63 @@ export default async function SettingsPage({
 }) {
   const { error, saved } = await searchParams;
   const supabase = await createClient();
+  const org = await getOrgContext(supabase);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("nombre, marca, telefono, plan, estado")
-    .eq("auth_user_id", user.id)
+  const { data: fullOrg } = await supabase
+    .from("organizations")
+    .select("nombre, marca, telefono, plan, estado, tipo")
+    .eq("id", org.orgId)
     .maybeSingle();
-  if (!coach) redirect("/onboarding");
+
+  const puedeEditar = esDueno(org.rol);
 
   return (
-    <div className="glass max-w-md rounded-3xl p-8 sm:p-10">
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Configuración</h1>
-      <p className="mb-8 text-sm text-muted">
-        Plan {coach.plan} · Estado {coach.estado}
-      </p>
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">Configuración</h1>
+        <p className="text-sm text-muted">
+          {TIPO_LABEL[fullOrg?.tipo ?? org.tipo]} · Plan {fullOrg?.plan} · {fullOrg?.estado}
+        </p>
+      </div>
 
-      <form action={updateCoachProfile} className="flex flex-col gap-4">
-        <input
-          name="nombre"
-          defaultValue={coach.nombre ?? ""}
-          placeholder="Tu nombre"
-          className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
-        />
-        <input
-          name="marca"
-          defaultValue={coach.marca ?? ""}
-          placeholder="Nombre de tu marca"
-          className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
-        />
-        <input
-          name="telefono"
-          defaultValue={coach.telefono ?? ""}
-          placeholder="Teléfono (para conectar el bot más adelante)"
-          className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
-        />
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {saved && !error && <p className="text-sm text-green-400">Guardado.</p>}
-        <button type="submit" className="btn-primary mt-2 self-start rounded-2xl px-5 py-3 text-[15px] font-semibold">
-          Guardar
-        </button>
-      </form>
+      <section className="glass max-w-md rounded-3xl p-7 sm:p-8">
+        <h2 className="mb-5 text-lg font-semibold tracking-tight">Tu cuenta</h2>
+        {!puedeEditar && (
+          <p className="mb-4 text-sm text-muted">
+            Solo el dueño de la cuenta puede editar estos datos.
+          </p>
+        )}
+        <form action={updateOrgProfile} className="flex flex-col gap-4">
+          <input
+            name="nombre"
+            defaultValue={fullOrg?.nombre ?? ""}
+            disabled={!puedeEditar}
+            placeholder="Nombre"
+            className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted disabled:opacity-50"
+          />
+          <input
+            name="marca"
+            defaultValue={fullOrg?.marca ?? ""}
+            disabled={!puedeEditar}
+            placeholder="Marca (lo que ven tus clientes)"
+            className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted disabled:opacity-50"
+          />
+          <input
+            name="telefono"
+            defaultValue={fullOrg?.telefono ?? ""}
+            disabled={!puedeEditar}
+            placeholder="Teléfono (para conectar el bot más adelante)"
+            className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted disabled:opacity-50"
+          />
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          {saved && !error && <p className="text-sm text-green-400">Guardado.</p>}
+          {puedeEditar && (
+            <button type="submit" className="btn-primary mt-2 self-start rounded-2xl px-5 py-3 text-[15px] font-semibold">
+              Guardar
+            </button>
+          )}
+        </form>
+      </section>
     </div>
   );
 }

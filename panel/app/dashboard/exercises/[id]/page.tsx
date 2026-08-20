@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/org";
 import { signMediaPaths } from "@/lib/media";
 import MediaUploader from "../MediaUploader";
 import { setExerciseMedia, removeExerciseMedia } from "../actions";
@@ -8,27 +9,16 @@ import { setExerciseMedia, removeExerciseMedia } from "../actions";
 export default async function ExerciseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!coach) redirect("/onboarding");
+  const org = await getOrgContext(supabase);
 
   const { data: exercise } = await supabase
     .from("exercises")
-    .select("id, nombre_canonico, grupo_muscular, tipo, instrucciones, es_global, coach_id, imagen_url, imagen_path, video_path")
+    .select("id, nombre_canonico, grupo_muscular, tipo, instrucciones, es_global, org_id, imagen_url, imagen_path, video_path")
     .eq("id", id)
     .maybeSingle();
   if (!exercise) notFound();
 
-  const esPropio = !exercise.es_global && exercise.coach_id === coach.id;
+  const esPropio = !exercise.es_global && exercise.org_id === org.orgId;
   const signed = await signMediaPaths(supabase, [exercise.imagen_path, exercise.video_path]);
   const imagenSrc = exercise.imagen_path ? signed.get(exercise.imagen_path) : exercise.imagen_url;
   const videoSrc = exercise.video_path ? signed.get(exercise.video_path) : null;
@@ -63,7 +53,7 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
         )}
         {esPropio ? (
           <MediaUploader
-            coachId={coach.id}
+            orgId={org.orgId}
             kind="imagen"
             currentPath={exercise.imagen_path}
             onSave={setExerciseMedia.bind(null, exercise.id, "imagen")}
@@ -86,7 +76,7 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
         )}
         {esPropio && (
           <MediaUploader
-            coachId={coach.id}
+            orgId={org.orgId}
             kind="video"
             currentPath={exercise.video_path}
             onSave={setExerciseMedia.bind(null, exercise.id, "video")}

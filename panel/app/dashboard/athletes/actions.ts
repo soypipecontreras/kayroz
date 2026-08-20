@@ -3,40 +3,31 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/org";
 import { parseItems } from "@/lib/routineItems";
 
 // Alta manual: no pasa por código de invitación ni WhatsApp (todavía no hay
-// canal conectado). El coach carga el atleta directo desde el panel; cuando
-// el bot esté activo, ese mismo atleta puede vincular su teléfono más
-// adelante (columna telefono queda libre para completarse después).
+// canal conectado). Se carga directo desde el panel; cuando el bot esté activo,
+// esa misma persona puede vincular su teléfono más adelante.
 export async function createAthlete(formData: FormData) {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!coach) redirect("/onboarding");
+  const org = await getOrgContext(supabase);
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   const telefonoRaw = String(formData.get("telefono") ?? "").trim();
   const unidadPeso = String(formData.get("unidad_peso") ?? "kg");
+  const sedeId = String(formData.get("sede_id") ?? "").trim();
 
   if (!nombre) redirect("/dashboard/athletes/new?error=Falta el nombre");
 
   const { data: athlete, error } = await supabase
     .from("athletes")
     .insert({
-      coach_id: coach.id,
+      org_id: org.orgId,
       nombre,
       telefono: telefonoRaw || null,
       unidad_peso: unidadPeso === "lb" ? "lb" : "kg",
+      sede_id: sedeId || null,
     })
     .select("id")
     .single();
@@ -55,10 +46,7 @@ export async function createAthlete(formData: FormData) {
 export async function generateAthleteAccess(athleteId: string) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  await getOrgContext(supabase);
 
   const { data: athlete } = await supabase.from("athletes").select("id").eq("id", athleteId).maybeSingle();
   if (!athlete) redirect("/dashboard");
@@ -83,10 +71,7 @@ export async function generateAthleteAccess(athleteId: string) {
 export async function assignFromTemplate(athleteId: string, formData: FormData) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  await getOrgContext(supabase);
 
   const templateId = String(formData.get("template_id") ?? "");
   const back = `/dashboard/athletes/${athleteId}`;
@@ -131,10 +116,7 @@ export async function assignFromTemplate(athleteId: string, formData: FormData) 
 export async function assignCustomRoutine(athleteId: string, formData: FormData) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  await getOrgContext(supabase);
 
   const back = `/dashboard/athletes/${athleteId}`;
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -164,10 +146,7 @@ export async function assignCustomRoutine(athleteId: string, formData: FormData)
 export async function deleteRoutine(athleteId: string, routineId: string) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  await getOrgContext(supabase);
 
   const back = `/dashboard/athletes/${athleteId}`;
 

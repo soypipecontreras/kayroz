@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { generateInviteCode } from "./actions";
+import { getOrgContext, etiquetaClientes, puedeVerPlata } from "@/lib/org";
 
 function diasRestantes(trialTerminaEn: string | null): number | null {
   if (!trialTerminaEn) return null;
@@ -15,52 +14,36 @@ function diasDesde(fecha: string | null): number | null {
   return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
 }
 
-function formatUltimaSesion(dias: number | null): string {
-  if (dias === null) return "todavía no entrenó";
-  if (dias === 0) return "hoy";
-  if (dias === 1) return "ayer";
-  return `hace ${dias} días`;
-}
-
-// "Perdido" = ya entrenó alguna vez pero lleva más de 5 días sin volver —
-// mismo umbral que la propuesta de valor del coach en el §1 de CLAUDE.md
-// ("quién lleva 5 días perdido").
-function ultimaSesionClass(dias: number | null): string {
-  if (dias === null) return "text-muted";
-  if (dias > 5) return "text-red-400";
-  return "text-muted";
+function formatoCOP(monto: number): string {
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(monto);
 }
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const org = await getOrgContext(supabase);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const hoy = new Date();
+  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
 
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id, plan, trial_termina_en")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!coach) redirect("/onboarding");
-
-  const [{ data: athletes }, { data: inviteCodes }] = await Promise.all([
-    supabase
-      .from("athletes")
-      .select("id, nombre, telefono, estado, ultima_sesion_en")
-      .eq("coach_id", coach.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("invite_codes")
-      .select("codigo, usos_actuales, usos_max, activo, created_at")
-      .eq("coach_id", coach.id)
-      .order("created_at", { ascending: false }),
+  const [{ data: athletes }, { data: pagosMes }, { data: subsVencen }] = await Promise.all([
+    supabase.from("athletes").select("id, nombre, estado, ultima_sesion_en").eq("org_id", org.orgId),
+    puedeVerPlata(org.rol)
+      ? supabase.from("payments").select("monto").eq("org_id", org.orgId).gte("fecha", primerDiaMes)
+      : Promise.resolve({ data: null }),
+    puedeVerPlata(org.rol)
+      ? supabase
+          .from("member_subscriptions")
+          .select("id, termina_en, estado")
+          .eq("org_id", org.orgId)
+          .neq("estado", "cancelada")
+      : Promise.resolve({ data: null }),
   ]);
 
-  const dias = diasRestantes(coach.trial_termina_en);
-
+  const dias = diasRestantes(org.trialTerminaEn);
   const activos = (athletes ?? []).filter((a) => a.estado === "activo");
   const entrenaronEstaSemana = activos.filter((a) => {
     const d = diasDesde(a.ultima_sesion_en);
@@ -71,115 +54,92 @@ export default async function DashboardPage() {
     return d !== null && d > 5;
   }).length;
 
+  const ingresosMes = (pagosMes ?? []).reduce((acc, p) => acc + Number(p.monto), 0);
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const vigentes = (subsVencen ?? []).filter((s) => s.termina_en >= hoyISO).length;
+  const vencidas = (subsVencen ?? []).filter((s) => s.termina_en < hoyISO).length;
+
   return (
-    <div>
-      <div className="mb-10">
-        <h1 className="mb-1 text-2xl font-semibold tracking-tight">Panel</h1>
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">Resumen</h1>
         <p className="text-sm text-muted">
-          Plan {coach.plan}
+          Plan {org.plan}
           {dias !== null && ` — ${dias} día${dias === 1 ? "" : "s"} de trial restantes`}
         </p>
       </div>
 
-      {activos.length > 0 && (
-        <section className="glass mb-8 rounded-3xl p-7 sm:p-8">
-          <h2 className="mb-5 text-lg font-semibold tracking-tight">Seguimiento</h2>
-          <div className="flex flex-wrap gap-8">
-            <div>
-              <p className="text-2xl font-semibold tracking-tight">
-                {entrenaronEstaSemana}/{activos.length}
-              </p>
-              <p className="text-sm text-muted">entrenaron en los últimos 7 días</p>
-            </div>
-            <div>
-              <p className={`text-2xl font-semibold tracking-tight ${perdidos > 0 ? "text-red-400" : ""}`}>
-                {perdidos}
-              </p>
-              <p className="text-sm text-muted">llevan más de 5 días perdidos</p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section className="glass mb-8 rounded-3xl p-7 sm:p-8">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Códigos de invitación</h2>
-          <form action={generateInviteCode}>
-            <button type="submit" className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold">
-              Generar código
-            </button>
-          </form>
-        </div>
-
-        {!inviteCodes || inviteCodes.length === 0 ? (
-          <p className="text-sm text-muted">
-            Todavía no generaste ningún código. Con uno, tu primer atleta se puede vincular por WhatsApp
-            cuando esté conectado.
+      {org.tipo === "individual" ? (
+        <section className="glass rounded-3xl p-7 sm:p-8">
+          <h2 className="mb-2 text-lg font-semibold tracking-tight">Tu cuenta personal</h2>
+          <p className="mb-5 text-sm text-muted">
+            Entrenás por tu cuenta. Armá tus rutinas y registrá tus entrenos desde tu portal.
           </p>
-        ) : (
-          <ul className="flex flex-col gap-2.5">
-            {inviteCodes.map((c) => (
-              <li
-                key={c.codigo}
-                className="glass-input flex items-center justify-between rounded-2xl px-4 py-3 text-sm"
-              >
-                <span className="font-mono text-[15px] font-medium tracking-wide">{c.codigo}</span>
-                <span className="text-muted">
-                  {c.usos_actuales}/{c.usos_max} usos{!c.activo && " — inactivo"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="glass rounded-3xl p-7 sm:p-8">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Tus atletas</h2>
-          <Link
-            href="/dashboard/athletes/new"
-            className="glass-input rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:border-white/40"
-          >
-            + Agregar atleta
+          <Link href="/app" className="btn-primary inline-block rounded-2xl px-5 py-3 text-[15px] font-semibold">
+            Ir a entrenar
           </Link>
-        </div>
+        </section>
+      ) : (
+        <>
+          <section className="glass rounded-3xl p-7 sm:p-8">
+            <h2 className="mb-5 text-lg font-semibold tracking-tight">Adherencia</h2>
+            {activos.length === 0 ? (
+              <p className="text-sm text-muted">
+                Todavía no tenés {etiquetaClientes(org.tipo).toLowerCase()}.{" "}
+                <Link href="/dashboard/athletes" className="underline underline-offset-4">
+                  Agregá el primero
+                </Link>
+                .
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-8">
+                <div>
+                  <p className="text-2xl font-semibold tracking-tight">
+                    {entrenaronEstaSemana}/{activos.length}
+                  </p>
+                  <p className="text-sm text-muted">entrenaron en los últimos 7 días</p>
+                </div>
+                <div>
+                  <p className={`text-2xl font-semibold tracking-tight ${perdidos > 0 ? "text-red-400" : ""}`}>
+                    {perdidos}
+                  </p>
+                  <p className="text-sm text-muted">llevan más de 5 días perdidos</p>
+                </div>
+              </div>
+            )}
+          </section>
 
-        {!athletes || athletes.length === 0 ? (
-          <p className="text-sm text-muted">
-            Todavía no tenés atletas. Agregá uno manualmente o compartí un código de invitación.
-          </p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-left text-muted">
-                <th className="pb-3 font-normal">Nombre</th>
-                <th className="pb-3 font-normal">Teléfono</th>
-                <th className="pb-3 font-normal">Estado</th>
-                <th className="pb-3 font-normal">Última sesión</th>
-              </tr>
-            </thead>
-            <tbody>
-              {athletes.map((a) => (
-                <tr key={a.id} className="border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]">
-                  <td className="py-3.5">
-                    <Link
-                      href={`/dashboard/athletes/${a.id}`}
-                      className="font-medium underline underline-offset-4 transition-colors hover:text-white"
-                    >
-                      {a.nombre || "Sin nombre"}
-                    </Link>
-                  </td>
-                  <td className="py-3.5">{a.telefono || "—"}</td>
-                  <td className="py-3.5 capitalize">{a.estado}</td>
-                  <td className={`py-3.5 ${ultimaSesionClass(diasDesde(a.ultima_sesion_en))}`}>
-                    {formatUltimaSesion(diasDesde(a.ultima_sesion_en))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+          {puedeVerPlata(org.rol) && (
+            <section className="glass rounded-3xl p-7 sm:p-8">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-lg font-semibold tracking-tight">Este mes</h2>
+                <Link
+                  href="/dashboard/finanzas"
+                  className="text-sm text-muted underline underline-offset-4 transition-colors hover:text-foreground"
+                >
+                  Ver finanzas
+                </Link>
+              </div>
+              <div className="flex flex-wrap gap-8">
+                <div>
+                  <p className="text-2xl font-semibold tracking-tight">{formatoCOP(ingresosMes)}</p>
+                  <p className="text-sm text-muted">ingresos del mes</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold tracking-tight">{vigentes}</p>
+                  <p className="text-sm text-muted">membresías al día</p>
+                </div>
+                <div>
+                  <p className={`text-2xl font-semibold tracking-tight ${vencidas > 0 ? "text-red-400" : ""}`}>
+                    {vencidas}
+                  </p>
+                  <p className="text-sm text-muted">membresías vencidas</p>
+                </div>
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -3,23 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/org";
 import { parseItems, type ParsedItem } from "@/lib/routineItems";
-
-async function getOwnCoachId(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!coach) redirect("/onboarding");
-
-  return coach.id as string;
-}
 
 // Verifica que todos los exercise_id sean visibles para este coach (globales o
 // propios). RLS ya lo garantiza en el select, así que si falta alguno es que no
@@ -35,7 +20,7 @@ async function assertExercisesVisible(
 
 export async function createTemplate(formData: FormData) {
   const supabase = await createClient();
-  const coachId = await getOwnCoachId(supabase);
+  const org = await getOrgContext(supabase);
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   const descripcion = String(formData.get("descripcion") ?? "").trim();
@@ -49,7 +34,7 @@ export async function createTemplate(formData: FormData) {
 
   const { data: template, error } = await supabase
     .from("routine_templates")
-    .insert({ coach_id: coachId, nombre, descripcion: descripcion || null })
+    .insert({ org_id: org.orgId, nombre, descripcion: descripcion || null })
     .select("id")
     .single();
   if (error) redirect(`/dashboard/routines/new?error=${encodeURIComponent(error.message)}`);
@@ -68,7 +53,7 @@ export async function createTemplate(formData: FormData) {
 
 export async function updateTemplate(templateId: string, formData: FormData) {
   const supabase = await createClient();
-  await getOwnCoachId(supabase);
+  await getOrgContext(supabase);
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   const descripcion = String(formData.get("descripcion") ?? "").trim();
@@ -105,7 +90,7 @@ export async function updateTemplate(templateId: string, formData: FormData) {
 
 export async function deleteTemplate(templateId: string) {
   const supabase = await createClient();
-  await getOwnCoachId(supabase);
+  await getOrgContext(supabase);
 
   // routine_template_exercises cae por ON DELETE CASCADE.
   const { error } = await supabase.from("routine_templates").delete().eq("id", templateId);

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/org";
 
 export default async function RoutineTemplatesPage({
   searchParams,
@@ -10,22 +10,12 @@ export default async function RoutineTemplatesPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!coach) redirect("/onboarding");
+  const org = await getOrgContext(supabase);
 
   const { data: templates } = await supabase
     .from("routine_templates")
     .select("id, nombre, descripcion, created_at, routine_template_exercises(id)")
-    .eq("coach_id", coach.id)
+    .eq("org_id", org.orgId)
     .order("created_at", { ascending: false });
 
   return (

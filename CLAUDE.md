@@ -136,13 +136,54 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
   `app.current_coach_id()` son del bot y el panel nunca las satisface); (2) los `update` del
   panel llevan `.select()` y chequean que haya vuelto al menos una fila, para que un agujero
   así falle ruidosamente en vez de en silencio.
+- ✅ **Organizaciones, roles y módulos de negocio (Fase D — la migración de fondo)**. El tenant
+  ya no es "un coach": es una `organization` con un `tipo` (`gimnasio` | `entrenador` |
+  `individual`) y gente adentro con roles. `coaches` se renombró a `organizations` y todos los
+  `coach_id` a `org_id` (51 referencias en 15 archivos). Se hizo con 1 org y 0 rutinas/entrenos
+  cargados: con clientes reales adentro habría sido una migración de datos, no un rename.
+  - **`memberships`** = quién entra a una org y con qué rol (`dueno`/`entrenador`/`recepcion`).
+    Reemplaza a `coaches.auth_user_id`, que se borró: la fuente de verdad del acceso ahora es
+    esta tabla, no una columna. Los **clientes** siguen en `athletes` con su propio flujo de
+    activación (ya andaba y estaba probado, no tenía sentido migrarlo). Un usuario pertenece a
+    **una** org por ahora — si un entrenador trabajara en dos gimnasios habría que relajar eso
+    y `auth_org_id()` necesitaría un selector de org activa.
+  - **La persona que entrena sola** es dueña de su propia org (`tipo='individual'`) **y** atleta
+    dentro de ella: dos filas, una para administrar y otra para entrenar. Sin la fila de
+    `athletes` no tendría dónde registrar entrenos. Puede armarse sus propias rutinas
+    (`routines_write_own_by_athlete`).
+  - **Roles y plata**: `auth_can_manage_money()` (dueño + recepción) es la frontera. Un
+    entrenador ve socios, sedes y rutinas pero **cero pagos** — verificado por SQL simulando su
+    rol: ve 1 socio, 0 pagos, y el insert en `payments` le rebota con error de RLS.
+  - **Negocio**: `sedes`, `membership_plans` (lo que el gimnasio le cobra al socio — **no**
+    confundir con `organizations.plan`, que es lo que la org nos paga a nosotros),
+    `member_subscriptions`, `payments` (fuente única de ingresos, venga de membresía o
+    producto), `products`, `product_sales`. Vender un plan crea suscripción + pago en el mismo
+    action, y si el pago falla se deshace la suscripción: un plan vendido sin plata registrada
+    haría que "ingresos" mienta. La vigencia de una membresía **se calcula por fecha**, no por
+    un `estado` que habría que mantener con un cron que todavía no existe.
+  - **Menú lateral izquierdo** (`app/dashboard/Sidebar.tsx`), agrupado en Entrenamiento /
+    Gestión / Negocio. Se arma según tipo de org y rol: un entrenador independiente no ve
+    Sedes, un entrenador empleado no ve Finanzas. Ocultar **no es seguridad** — el candado son
+    las policies; esto evita mostrar puertas cerradas.
+  - `getOrgContext()` (`panel/lib/org.ts`) es el único lugar donde el panel resuelve quién sos:
+    devuelve org + rol, y si no sos staff te manda a `/app` o `/onboarding` según corresponda.
+- ⚠️ **Tres trampas que costaron un bug real cada una en esta migración** (leer antes de tocar
+  el esquema):
+  1. **`drop column` va después de borrar las policies que la referencian.** Postgres se niega
+     si no, y como la migración es transaccional se revierte entera.
+  2. **Postgres actualiza las expresiones de las POLICIES al renombrar una columna, pero NO los
+     cuerpos de las funciones.** `redeem_invite_code` y `get_athlete_activation` quedaron
+     apuntando a `coach_id` y habrían explotado recién en runtime (canjear un código, activar
+     un cliente). No lo detecta ningún typecheck. Tras cualquier rename:
+     `select proname, prosrc from pg_proc where pronamespace='public'::regnamespace and prosrc ilike '%<viejo>%';`
+  3. **Un `insert` con `returning` necesita también policy de SELECT sobre la fila nueva.**
+     Crear una org fallaba con "new row violates row-level security policy" porque en ese
+     instante el usuario aún no tiene membership y no puede leer lo que acaba de insertar. Se
+     resolvió con `create_organization()` (security definer, atómica: org + membership +
+     athlete), que además elimina la compensación "si falla el membership, borro la org".
 - ❌ Todo lo de `routine_versions`/`routine_days`, `assignments`, progresión automática, sesión
-  guiada, cron/reportes, cobros, gráficos de progreso en el panel: **solo diseño**, cero
-  código. Ver §9 para el orden de construcción.
-- ❌ **Multi-entrenador bajo una misma marca**: hoy el modelo es un coach = un tenant. Una
-  cadena con varios entrenadores compartiendo catálogo, plantillas y atletas necesitaría una
-  entidad `organizations` por encima de `coaches` y roles (dueño/entrenador/recepción). No está
-  construido y no es un detalle — es una migración de fondo. Ver §11.
+  guiada, cron/reportes, cobros de Kayroz a la org, gráficos de progreso: **solo diseño**, cero
+  código. Ver §9.
 
 ---
 
@@ -545,16 +586,12 @@ No construyas nada de esto aunque parezca buena idea:
 - Wearables o integraciones con Strava/Apple Health.
 - Gamificación social entre atletas.
 
-**Cadenas de gimnasios (varios entrenadores bajo una marca):** el producto apunta tanto a un
-entrenador personal suelto como a un gimnasio con varios entrenadores. Hoy el modelo cubre bien
-el primer caso y a medias el segundo: las plantillas de rutina (§9, Fase C) ya evitan recargar
-la misma rutina por atleta, que era el cuello de botella real al escalar. Lo que **no** existe
-es una entidad por encima de `coaches`: hoy un coach es el tenant, así que dos entrenadores del
-mismo gimnasio son dos cuentas aisladas que no comparten catálogo, plantillas ni atletas, y no
-hay roles (dueño / entrenador / recepción) ni un lugar donde ver el gimnasio entero. Construirlo
-es una migración de fondo (`organizations`, `coach_id` → `org_id` en varias tablas, RLS nueva en
-todas), no un agregado incremental — no arrancarlo sin confirmar el plan y sin saber si hay un
-cliente real de ese tamaño esperando.
+**Cadenas de gimnasios:** ✅ construido (Fase D, ver §0). Un gimnasio es una `organization` con
+sedes y staff con roles; un entrenador independiente y una persona que entrena sola son la
+misma tabla con otro `tipo`. Lo que **no** está: que una persona pertenezca a más de una org
+(hoy `auth_org_id()` asume una sola), permisos más finos que los tres roles actuales, y que un
+entrenador vea solo *sus* asignados en vez de todos los de la org (`athletes.entrenador_id`
+existe pero todavía no filtra nada).
 
 **App móvil nativa (iOS/Android):** decidida (no es una opción abierta) pero diferida a una
 fase aparte — se eligió explícitamente por sobre PWA/responsive-only. Mientras tanto el panel

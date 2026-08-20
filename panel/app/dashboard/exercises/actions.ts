@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getOrgContext } from "@/lib/org";
 import { COACH_MEDIA_BUCKET } from "@/lib/media";
 
 const GRUPOS_MUSCULARES = [
@@ -22,18 +23,7 @@ const TIPOS = ["barra", "mancuerna", "maquina", "cable", "peso_corporal", "banda
 
 export async function createExercise(formData: FormData) {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!coach) redirect("/onboarding");
+  const org = await getOrgContext(supabase);
 
   const nombreCanonico = String(formData.get("nombre_canonico") ?? "").trim();
   const grupoMuscular = String(formData.get("grupo_muscular") ?? "");
@@ -49,7 +39,7 @@ export async function createExercise(formData: FormData) {
   }
 
   const { error } = await supabase.from("exercises").insert({
-    coach_id: coach.id,
+    org_id: org.orgId,
     nombre_canonico: nombreCanonico,
     grupo_muscular: grupoMuscular,
     tipo,
@@ -69,18 +59,19 @@ export async function createExercise(formData: FormData) {
 // Devuelven { error } en vez de redirect: las llama MediaUploader (componente
 // cliente) después de haber subido el archivo, y necesita poder limpiar el
 // archivo huérfano si el guardado falla.
-async function ownCoachOrNull(supabase: Awaited<ReturnType<typeof createClient>>) {
+async function ownOrgOrNull(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id")
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("org_id")
     .eq("auth_user_id", user.id)
+    .eq("estado", "activo")
     .maybeSingle();
-  return coach?.id ? (coach.id as string) : null;
+  return membership?.org_id ? (membership.org_id as string) : null;
 }
 
 export async function setExerciseMedia(
@@ -89,21 +80,21 @@ export async function setExerciseMedia(
   path: string,
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
-  const coachId = await ownCoachOrNull(supabase);
-  if (!coachId) return { error: "No hay sesión activa." };
+  const orgId = await ownOrgOrNull(supabase);
+  if (!orgId) return { error: "No hay sesión activa." };
 
   // La ruta la arma el navegador, así que se verifica que caiga dentro de la
-  // carpeta de este coach (las policies del bucket ya lo exigen para subir,
+  // carpeta de esta org (las policies del bucket ya lo exigen para subir,
   // esto evita además guardar una ruta ajena en la fila propia).
-  if (!path.startsWith(`${coachId}/`)) return { error: "Ruta de archivo inválida." };
+  if (!path.startsWith(`${orgId}/`)) return { error: "Ruta de archivo inválida." };
 
   const { data: exercise } = await supabase
     .from("exercises")
-    .select("id, coach_id, es_global, imagen_path, video_path")
+    .select("id, org_id, es_global, imagen_path, video_path")
     .eq("id", exerciseId)
     .maybeSingle();
   if (!exercise) return { error: "No encontramos el ejercicio." };
-  if (exercise.es_global || exercise.coach_id !== coachId) {
+  if (exercise.es_global || exercise.org_id !== orgId) {
     return { error: "Solo podés cargar media en tus propios ejercicios." };
   }
 
@@ -135,16 +126,16 @@ export async function removeExerciseMedia(
   kind: "imagen" | "video",
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
-  const coachId = await ownCoachOrNull(supabase);
-  if (!coachId) return { error: "No hay sesión activa." };
+  const orgId = await ownOrgOrNull(supabase);
+  if (!orgId) return { error: "No hay sesión activa." };
 
   const { data: exercise } = await supabase
     .from("exercises")
-    .select("id, coach_id, es_global, imagen_path, video_path")
+    .select("id, org_id, es_global, imagen_path, video_path")
     .eq("id", exerciseId)
     .maybeSingle();
   if (!exercise) return { error: "No encontramos el ejercicio." };
-  if (exercise.es_global || exercise.coach_id !== coachId) {
+  if (exercise.es_global || exercise.org_id !== orgId) {
     return { error: "Solo podés editar tus propios ejercicios." };
   }
 

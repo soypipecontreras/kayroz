@@ -27,18 +27,22 @@ export default function LoginPage() {
       return;
     }
 
-    // Un mismo login sirve para coach y atleta — se resuelve acá a qué panel
-    // corresponde cada uno (mismo concepto que resolveIdentity del bot).
-    const { data: coach } = await supabase
-      .from("coaches")
+    // Un mismo login sirve para staff (gimnasio/entrenador) y para quien
+    // entrena — se resuelve acá a qué lado va cada uno (mismo concepto que
+    // resolveIdentity del bot).
+    const { data: membership } = await supabase
+      .from("memberships")
       .select("id")
       .eq("auth_user_id", data.user.id)
+      .eq("estado", "activo")
       .maybeSingle();
 
     setLoading(false);
-    if (coach) {
+    if (membership) {
       router.push("/dashboard");
     } else {
+      // Atleta, o alguien recién registrado sin cuenta armada: /app y
+      // /onboarding se encargan de mandarlo donde corresponda.
       router.push("/app");
     }
     router.refresh();
