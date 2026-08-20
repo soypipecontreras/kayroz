@@ -13,7 +13,7 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
 
   const { data: exercise } = await supabase
     .from("exercises")
-    .select("id, nombre_canonico, grupo_muscular, tipo, instrucciones, es_global, org_id, imagen_url")
+    .select("id, nombre_canonico, grupo_muscular, tipo, instrucciones, es_global, org_id, imagen_url, preparacion, ejecucion, errores")
     .eq("id", id)
     .maybeSingle();
   if (!exercise) notFound();
@@ -47,6 +47,47 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
         </p>
         {exercise.instrucciones && <p className="mt-2 text-sm text-muted">{exercise.instrucciones}</p>}
       </div>
+
+      {(exercise.preparacion || exercise.ejecucion || exercise.errores?.length) && (
+        <section className="glass rounded-3xl p-7 sm:p-8">
+          <h2 className="mb-5 text-lg font-semibold tracking-tight">Cómo se hace</h2>
+          <div className="flex flex-col gap-5">
+            {exercise.preparacion && (
+              <div>
+                <h3 className="mb-1.5 text-sm font-medium uppercase tracking-wider text-muted">
+                  Preparación
+                </h3>
+                <p className="text-[15px] leading-relaxed">{exercise.preparacion}</p>
+              </div>
+            )}
+            {exercise.ejecucion && (
+              <div>
+                <h3 className="mb-1.5 text-sm font-medium uppercase tracking-wider text-muted">
+                  Ejecución
+                </h3>
+                <p className="text-[15px] leading-relaxed">{exercise.ejecucion}</p>
+              </div>
+            )}
+            {exercise.errores && exercise.errores.length > 0 && (
+              <div>
+                <h3 className="mb-1.5 text-sm font-medium uppercase tracking-wider text-muted">
+                  Errores comunes
+                </h3>
+                <ul className="flex flex-col gap-2">
+                  {exercise.errores.map((e: string, i: number) => (
+                    <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed">
+                      <span aria-hidden="true" className="shrink-0 text-muted">
+                        —
+                      </span>
+                      <span>{e}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="glass rounded-3xl p-7 sm:p-8">
         <h2 className="mb-5 text-lg font-semibold tracking-tight">Foto</h2>

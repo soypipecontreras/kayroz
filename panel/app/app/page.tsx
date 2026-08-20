@@ -7,6 +7,9 @@ interface ExerciseRef {
   nombre_canonico: string;
   instrucciones: string | null;
   imagen_url: string | null;
+  preparacion: string | null;
+  ejecucion: string | null;
+  errores: string[] | null;
 }
 
 interface RoutineExerciseRow {
@@ -68,7 +71,7 @@ export default async function AthleteHomePage() {
     ? await supabase
         .from("routine_exercises")
         .select(
-          "routine_id, exercise_id, orden, series_obj, reps_min, reps_max, rpe_obj, descanso_seg, notas, imagen_path, video_path, exercises(nombre_canonico, instrucciones, imagen_url)",
+          "routine_id, exercise_id, orden, series_obj, reps_min, reps_max, rpe_obj, descanso_seg, notas, imagen_path, video_path, exercises(nombre_canonico, instrucciones, imagen_url, preparacion, ejecucion, errores)",
         )
         .in("routine_id", routineIds)
         .order("orden", { ascending: true })
@@ -169,6 +172,43 @@ export default async function AthleteHomePage() {
                           )}
                         </div>
                       </div>
+
+                      {(ex?.preparacion || ex?.ejecucion || ex?.errores?.length) && (
+                        <details className="mt-3">
+                          <summary className="cursor-pointer text-sm text-muted transition-colors hover:text-foreground">
+                            Cómo se hace
+                          </summary>
+                          <div className="mt-2 flex flex-col gap-3 text-sm leading-relaxed">
+                            {ex?.preparacion && (
+                              <p>
+                                <span className="text-muted">Preparación. </span>
+                                {ex.preparacion}
+                              </p>
+                            )}
+                            {ex?.ejecucion && (
+                              <p>
+                                <span className="text-muted">Ejecución. </span>
+                                {ex.ejecucion}
+                              </p>
+                            )}
+                            {ex?.errores && ex.errores.length > 0 && (
+                              <div>
+                                <p className="mb-1 text-muted">Errores comunes</p>
+                                <ul className="flex flex-col gap-1.5">
+                                  {ex.errores.map((err, i) => (
+                                    <li key={i} className="flex gap-2">
+                                      <span aria-hidden="true" className="shrink-0 text-muted">
+                                        —
+                                      </span>
+                                      <span>{err}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                      )}
 
                       {video && (
                         <details className="mt-3">
