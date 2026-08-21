@@ -260,13 +260,19 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
   automatización de Atajos ("Cuando termine un entreno" → POST `/api/health/ingest`, guía
   paso a paso en `/app/salud`); la app nativa futura usará el mismo RPC. La fecha se ancla a
   la timezone de la org.
-- ⚠️ **Migraciones `20260824000000`, `20260824000100` y `20260825000000` AÚN NO APLICADAS a la
-  base real** — la sesión que las escribió no tenía acceso al proyecto Supabase de Kayroz
-  (la cuenta MCP conectada era de otro proyecto). Fueron verificadas corriendo la cadena
-  completa de 31 migraciones + smoke tests de RLS e ingesta en PGlite (Postgres real en WASM).
-  **Aplicarlas antes de desplegar el panel**, si no las páginas nuevas (y el catálogo, que
-  ahora selecciona `disciplinas`) van a fallar en runtime. Después conviene correr
-  `get_advisors` como siempre.
+- ✅ **Migraciones `20260824000000`, `20260824000100` y `20260825000000` YA APLICADAS a la base
+  real** (20 ago 2026). Las escribió una sesión sin acceso al proyecto Supabase de Kayroz
+  (la cuenta MCP conectada era de otro proyecto), así que se habían verificado solo en PGlite;
+  quedaron sin aplicar mientras su código ya estaba desplegado — producción estuvo consultando
+  columnas inexistentes hasta que se corrieron. Resultado verificado contra la base real:
+  73 ejercicios globales (eran 45) todos con imagen y con guía técnica (`preparacion`/
+  `ejecucion`/`errores`), 226 alias, 13 plantillas globales en 5 disciplinas, y
+  `ingest_health_workout` devolviendo `token_invalido` ante un token falso sin filtrar datos.
+  `get_advisors` sin hallazgos nuevos (los WARN son los `security definer` intencionales).
+  **Lección repetida** (ya pasó con el incidente de Paula Olmos): migrar y desplegar tienen que
+  ir juntos — el código nuevo contra el esquema viejo, o al revés, rompe en producción.
+  Ojo también con el caché de esquema de PostgREST: conviene probar las columnas nuevas por
+  `/rest/v1/` y no solo por SQL, porque una columna puede existir y la API seguir sin verla.
 - ❌ Todo lo de `routine_versions`/`routine_days`, `assignments`, progresión automática, sesión
   guiada, cron/reportes, cobros de Kayroz a la org, gráficos de progreso: **solo diseño**, cero
   código. Ver §9.
