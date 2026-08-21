@@ -5,6 +5,22 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/org";
 import { parseItems, type ParsedItem } from "@/lib/routineItems";
+import { esDisciplina, esModalidad, esNivel, esObjetivo } from "@/lib/disciplinas";
+
+// Metadata de la plantilla (disciplina/nivel/objetivo/modalidad). Valores
+// inválidos caen al default en vez de rebotar el form: no son campos críticos.
+function parseMeta(formData: FormData) {
+  const disciplina = String(formData.get("disciplina") ?? "");
+  const nivel = String(formData.get("nivel") ?? "");
+  const objetivo = String(formData.get("objetivo") ?? "");
+  const modalidad = String(formData.get("modalidad") ?? "");
+  return {
+    disciplina: esDisciplina(disciplina) ? disciplina : "gimnasio",
+    nivel: esNivel(nivel) ? nivel : null,
+    objetivo: esObjetivo(objetivo) ? objetivo : null,
+    modalidad: esModalidad(modalidad) ? modalidad : "series",
+  };
+}
 
 // Verifica que todos los exercise_id sean visibles para este coach (globales o
 // propios). RLS ya lo garantiza en el select, así que si falta alguno es que no
@@ -34,7 +50,7 @@ export async function createTemplate(formData: FormData) {
 
   const { data: template, error } = await supabase
     .from("routine_templates")
-    .insert({ org_id: org.orgId, nombre, descripcion: descripcion || null })
+    .insert({ org_id: org.orgId, nombre, descripcion: descripcion || null, ...parseMeta(formData) })
     .select("id")
     .single();
   if (error) redirect(`/dashboard/routines/new?error=${encodeURIComponent(error.message)}`);
@@ -68,7 +84,7 @@ export async function updateTemplate(templateId: string, formData: FormData) {
 
   const { error: updateError } = await supabase
     .from("routine_templates")
-    .update({ nombre, descripcion: descripcion || null })
+    .update({ nombre, descripcion: descripcion || null, ...parseMeta(formData) })
     .eq("id", templateId);
   if (updateError) redirect(`${back}?error=${encodeURIComponent(updateError.message)}`);
 

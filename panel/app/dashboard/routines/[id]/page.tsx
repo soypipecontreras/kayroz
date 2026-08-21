@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/org";
 import RoutineBuilder, { type BuilderItem } from "../RoutineBuilder";
+import TemplateMetaFields from "../TemplateMetaFields";
 import { updateTemplate, deleteTemplate } from "../actions";
 
 interface TemplateExerciseRow {
@@ -32,10 +33,10 @@ export default async function EditRoutineTemplatePage({
 
   const { data: template } = await supabase
     .from("routine_templates")
-    .select("id, nombre, descripcion")
+    .select("id, nombre, descripcion, disciplina, nivel, objetivo, modalidad, es_global")
     .eq("id", id)
     .maybeSingle();
-  if (!template) notFound();
+  if (!template || template.es_global) notFound(); // las de la Biblioteca Kayroz no se editan
 
   const [{ data: templateExercises }, { data: exercises }] = await Promise.all([
     supabase
@@ -84,6 +85,14 @@ export default async function EditRoutineTemplatePage({
           action={updateTemplate.bind(null, id)}
           submitLabel="Guardar cambios"
           withDescripcion
+          metaFields={
+            <TemplateMetaFields
+              disciplina={template.disciplina ?? "gimnasio"}
+              nivel={template.nivel ?? ""}
+              objetivo={template.objetivo ?? ""}
+              modalidad={template.modalidad ?? "series"}
+            />
+          }
           error={error}
         />
       </section>

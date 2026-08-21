@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/org";
 import { COACH_MEDIA_BUCKET } from "@/lib/media";
+import { DISCIPLINAS, type Disciplina } from "@/lib/disciplinas";
 
 const GRUPOS_MUSCULARES = [
   "pecho",
@@ -29,6 +30,10 @@ export async function createExercise(formData: FormData) {
   const grupoMuscular = String(formData.get("grupo_muscular") ?? "");
   const tipo = String(formData.get("tipo") ?? "");
   const instrucciones = String(formData.get("instrucciones") ?? "").trim();
+  const disciplinas = formData
+    .getAll("disciplinas")
+    .map(String)
+    .filter((d): d is Disciplina => (DISCIPLINAS as readonly string[]).includes(d));
 
   if (!nombreCanonico) redirect("/dashboard/exercises?error=Falta el nombre del ejercicio");
   if (!GRUPOS_MUSCULARES.includes(grupoMuscular as (typeof GRUPOS_MUSCULARES)[number])) {
@@ -45,6 +50,8 @@ export async function createExercise(formData: FormData) {
     tipo,
     instrucciones: instrucciones || null,
     es_global: false,
+    // Sin ninguna marcada se cae al default del esquema ('{gimnasio}').
+    ...(disciplinas.length > 0 ? { disciplinas } : {}),
   });
 
   if (error) {

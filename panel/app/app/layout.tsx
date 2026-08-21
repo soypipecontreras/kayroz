@@ -3,12 +3,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAthlete } from "./actions";
+import PortalTabs from "./PortalTabs";
 
 const LINKS = [
   { href: "/app", label: "Hoy" },
   { href: "/app/log", label: "Cargar" },
+  { href: "/app/recomendadas", label: "Rutinas" },
   { href: "/app/historial", label: "Historial" },
   { href: "/app/prs", label: "PRs" },
+  { href: "/app/perfil", label: "Perfil" },
 ];
 
 export default async function AthletePortalLayout({ children }: { children: React.ReactNode }) {
@@ -67,15 +70,12 @@ export default async function AthletePortalLayout({ children }: { children: Reac
           </form>
         </div>
       </header>
-      <nav className="mx-auto flex max-w-2xl gap-5 px-6 pt-4 text-sm text-muted sm:hidden">
-        {LINKS.map((l) => (
-          <Link key={l.href} href={l.href} className="transition-colors hover:text-foreground">
-            {l.label}
-          </Link>
-        ))}
-      </nav>
-      <main className="mx-auto max-w-2xl px-6 py-10">{children}</main>
-      <footer className="mx-auto max-w-2xl px-6 pb-10 text-xs text-muted">Kayroz</footer>
+      {/* En el celular la navegación vive abajo, al alcance del pulgar, como
+          en una app nativa — el portal es la "app" hasta que exista la nativa.
+          El padding de abajo del main deja lugar para la barra fija. */}
+      <main className="mx-auto max-w-2xl px-6 py-10 pb-28 sm:pb-10">{children}</main>
+      <PortalTabs />
+      <footer className="mx-auto max-w-2xl px-6 pb-28 text-xs text-muted sm:pb-10">Kayroz</footer>
     </div>
   );
 }

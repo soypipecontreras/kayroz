@@ -42,6 +42,7 @@ export default function RoutineBuilder({
   action,
   submitLabel,
   withDescripcion = false,
+  metaFields,
   error,
 }: {
   exercises: CatalogExercise[];
@@ -51,6 +52,10 @@ export default function RoutineBuilder({
   action: (formData: FormData) => void;
   submitLabel: string;
   withDescripcion?: boolean;
+  // Campos extra del formulario (disciplina/nivel/objetivo de la plantilla).
+  // Van como nodo del server component padre para que este componente cliente
+  // no cargue con el vocabulario de disciplinas.
+  metaFields?: React.ReactNode;
   error?: string;
 }) {
   const [items, setItems] = useState<BuilderItem[]>(initialItems);
@@ -119,6 +124,7 @@ export default function RoutineBuilder({
             className="glass-input rounded-2xl px-4 py-3 text-[15px] text-foreground outline-none placeholder:text-muted"
           />
         )}
+        {metaFields}
       </div>
 
       <div>

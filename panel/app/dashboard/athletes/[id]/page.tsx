@@ -77,8 +77,14 @@ export default async function AthleteDetailPage({
         .order("orden", { ascending: true })
     : { data: [] as (RoutineExerciseRow & { routine_id: string })[] };
 
+  // RLS ya limita a las plantillas de la propia org + las globales de la
+  // Biblioteca Kayroz; se ordena para que las propias salgan primero.
   const [{ data: templates }, { data: exercises }] = await Promise.all([
-    supabase.from("routine_templates").select("id, nombre").order("nombre", { ascending: true }),
+    supabase
+      .from("routine_templates")
+      .select("id, nombre, es_global")
+      .order("es_global", { ascending: true })
+      .order("nombre", { ascending: true }),
     supabase
       .from("exercises")
       .select("id, nombre_canonico, grupo_muscular, tipo")
@@ -217,7 +223,7 @@ export default async function AthleteDetailPage({
         {templates && templates.length > 0 && (
           <details className="mb-3">
             <summary className="cursor-pointer text-sm font-medium text-muted transition-colors hover:text-foreground">
-              Asignar una de tus rutinas
+              Asignar una rutina (tuyas y Biblioteca Kayroz)
             </summary>
             <form action={assignFromTemplate.bind(null, id)} className="mt-4 flex flex-wrap gap-3">
               <select
@@ -231,7 +237,7 @@ export default async function AthleteDetailPage({
                 </option>
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.nombre}
+                    {t.es_global ? `Kayroz · ${t.nombre}` : t.nombre}
                   </option>
                 ))}
               </select>

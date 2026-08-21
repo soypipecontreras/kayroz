@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgContext } from "@/lib/org";
 import RoutineBuilder from "../RoutineBuilder";
+import TemplateMetaFields from "../TemplateMetaFields";
 import { createTemplate } from "../actions";
 
 export default async function NewRoutineTemplatePage({
@@ -36,6 +37,7 @@ export default async function NewRoutineTemplatePage({
           action={createTemplate}
           submitLabel="Guardar rutina"
           withDescripcion
+          metaFields={<TemplateMetaFields />}
           error={error}
         />
       </section>
