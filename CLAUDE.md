@@ -273,6 +273,22 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
   ir juntos — el código nuevo contra el esquema viejo, o al revés, rompe en producción.
   Ojo también con el caché de esquema de PostgREST: conviene probar las columnas nuevas por
   `/rest/v1/` y no solo por SQL, porque una columna puede existir y la API seguir sin verla.
+- ⚠️ **`supabase/migrations/` es ahora el registro COMPLETO, y hay que mantenerlo así**
+  (reconciliado el 20 ago 2026). Aplicar por MCP (`apply_migration`) graba en
+  `supabase_migrations.schema_migrations` el timestamp del momento de la corrida, **no** el
+  del nombre del archivo. Como el proyecto se venía migrando así, ninguna de las 31 versiones
+  locales figuraba en el historial y **seis migraciones vivían solo en la base, sin archivo**:
+  `exercise_specific_images_batch1`/`batch2` y `set_exercise_type_icons` (las imágenes del
+  catálogo), `fix_current_user_id_search_path`, `fix_subscription_vigente_search_path` y
+  `fix_anon_policies_public_site`. Reconstruir la base desde el repo las habría perdido en
+  silencio. Se recuperó su SQL desde la columna `statements` del historial y se escribieron
+  como archivo con su versión original.
+  Con el CLI enlazado al proyecto real (`supabase/.temp/`), un `supabase db push` habría
+  intentado re-aplicar todo desde cero. Hoy `db push --dry-run` responde "Remote database is
+  up to date" y hay 37 archivos ↔ 37 filas en el historial.
+  **Regla: si aplicás una migración por MCP, escribí también el archivo con ESE mismo número
+  de versión.** Si no, vuelve la deriva. Para chequear:
+  `npx supabase db push --dry-run --linked` (debe decir "up to date").
 - ❌ Todo lo de `routine_versions`/`routine_days`, `assignments`, progresión automática, sesión
   guiada, cron/reportes, cobros de Kayroz a la org, gráficos de progreso: **solo diseño**, cero
   código. Ver §9.
