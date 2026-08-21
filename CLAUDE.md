@@ -219,6 +219,54 @@ mucho más chico — no asumas que todo lo de acá abajo está construido:
      instante el usuario aún no tiene membership y no puede leer lo que acaba de insertar. Se
      resolvió con `create_organization()` (security definer, atómica: org + membership +
      athlete), que además elimina la compensación "si falla el membership, borro la org".
+- ✅ **Multi-disciplina (Fase G)**: Kayroz ya no asume "gimnasio" — el vocabulario es
+  gimnasio / calistenia / crossfit / hyrox / funcional (`panel/lib/disciplinas.ts` espeja los
+  CHECK del esquema; si se agrega un valor, va en los dos lados). `exercises.disciplinas` es
+  ARRAY (un burpee cruza cuatro disciplinas); una plantilla ES de una disciplina (text simple)
+  y suma `nivel`/`objetivo`/`modalidad` (series|amrap|emom|fortime|circuito — es contexto de
+  UI, el shape de los ejercicios no cambia) /`duracion_min`/`dias_semana`. El catálogo global
+  pasó de 45 a **73 ejercicios** (28 nuevos con guía de técnica completa y alias, migración
+  `20260824000000`); los nuevos heredan el ícono genérico de su `tipo` copiando el imagen_url
+  más repetido del mismo tipo — sin URLs hardcodeadas. Filtro por disciplina en
+  `/dashboard/exercises`.
+- ✅ **Biblioteca Kayroz + rutinas recomendadas (Fase H)**: plantillas GLOBALES de la
+  plataforma (`routine_templates.es_global = true`, `org_id` NULL — mismo patrón que el
+  catálogo de ejercicios), 13 sembradas por disciplina y nivel (migración `20260824000100`,
+  con RAISE si un nombre de ejercicio no matchea). Solo lectura para todo el mundo: ninguna
+  policy de escritura las cubre; las lee cualquier `authenticated` (staff Y atletas). El
+  atleta define su perfil en `/app/perfil` (`athletes.objetivo/nivel/disciplinas/dias_semana`)
+  y `/app/recomendadas` puntúa la biblioteca con reglas explicables
+  (`panel/lib/recommend.ts` — sin LLM: las razones se muestran tal cual, y un nivel a >1
+  escalón descarta la plantilla). "Usar esta rutina" COPIA a `routines`/`routine_exercises`
+  vía las policies `*_own_by_athlete` que ya existían; se evita duplicar por nombre activo.
+  El coach ve la biblioteca en `/dashboard/routines` y la asigna desde la ficha del atleta
+  (el select mezcla propias + "Kayroz · X"). Las plantillas del coach ahora también llevan
+  disciplina/nivel/objetivo/modalidad (`TemplateMetaFields.tsx`).
+- ✅ **PWA completa (Fase I)**: service worker (`panel/public/sw.js`) — estáticos cache-first
+  (`/_next/static` lleva hash, no puede quedar viejo), navegación red-primero con fallback
+  `/offline` (página estática, `force-static`, precacheada en el install). **Nunca** cachea
+  datos de Supabase ni URLs firmadas. Registro solo en producción (`app/RegisterSW.tsx` — en
+  dev pelea con el hot reload). Manifest con scope/shortcuts/maskable, `viewport-fit=cover`.
+  Barra de pestañas inferior del portal en móvil (`app/app/PortalTabs.tsx`, mismos criterios
+  de íconos que `dashboard/icons.tsx`).
+- ✅ **Apple Watch / ingesta de salud (Fase J)**: entrenos del reloj entran a la MISMA tabla
+  `workouts` (columnas nuevas `fuente`/`inicio_en`/`calorias`/`fc_promedio`/`fc_max`/
+  `distancia_m`/`tipo_actividad`, migración `20260825000000`) — así cuentan solos para
+  adherencia y `ultima_sesion_en`; un entreno del reloj no tiene sets. Dedupe por índice único
+  parcial (atleta, fuente, inicio_en). Autenticación por `athletes.health_ingest_token` (uuid
+  revocable, se administra en `/app/salud`): el RPC `ingest_health_workout` es SECURITY
+  DEFINER ejecutable por `anon` a propósito — el Atajo de iOS no tiene sesión; devuelve solo
+  códigos (`ok|duplicado|token_invalido|datos_invalidos`), nunca datos. El canal HOY es una
+  automatización de Atajos ("Cuando termine un entreno" → POST `/api/health/ingest`, guía
+  paso a paso en `/app/salud`); la app nativa futura usará el mismo RPC. La fecha se ancla a
+  la timezone de la org.
+- ⚠️ **Migraciones `20260824000000`, `20260824000100` y `20260825000000` AÚN NO APLICADAS a la
+  base real** — la sesión que las escribió no tenía acceso al proyecto Supabase de Kayroz
+  (la cuenta MCP conectada era de otro proyecto). Fueron verificadas corriendo la cadena
+  completa de 31 migraciones + smoke tests de RLS e ingesta en PGlite (Postgres real en WASM).
+  **Aplicarlas antes de desplegar el panel**, si no las páginas nuevas (y el catálogo, que
+  ahora selecciona `disciplinas`) van a fallar en runtime. Después conviene correr
+  `get_advisors` como siempre.
 - ❌ Todo lo de `routine_versions`/`routine_days`, `assignments`, progresión automática, sesión
   guiada, cron/reportes, cobros de Kayroz a la org, gráficos de progreso: **solo diseño**, cero
   código. Ver §9.
@@ -615,13 +663,21 @@ semanal, avisos de trial — nada desplegado, ver §7.
 
 ---
 
-## 11. Fuera de alcance en v1
+## 11. Alcance — qué entró y qué sigue afuera
 
-No construyas nada de esto aunque parezca buena idea:
-- Nutrición, macros, calorías.
-- Videos, imágenes o análisis de técnica.
+El rumbo del producto se amplió por decisión del dueño (2026-08-20): Kayroz es una plataforma
+para **entrenadores, gimnasios y gente que entrena** — gimnasio, calistenia, crossfit, hyrox,
+funcional — con app móvil que **recomienda rutinas con fotos y videos** y **se conecta al
+Apple Watch**. Por eso varias cosas que acá decían "fuera de alcance" ya están construidas:
+multi-disciplina (Fase G), recomendación de rutinas (Fase H), PWA completa (Fase I) y la
+ingesta de entrenos del reloj vía HealthKit/Atajos (Fase J) — ver §0.
+
+Sigue fuera de alcance aunque parezca buena idea:
+- Nutrición, macros, calorías (las calorías del reloj se guardan, no se "asesoran").
+- Análisis automático de técnica (los videos/fotos por ejercicio ya existen, Fase C/F).
 - Chat directo atleta ↔ coach dentro del bot.
-- Wearables o integraciones con Strava/Apple Health.
+- Strava y wearables que no sean Apple Health (el contrato de ingesta ya es genérico:
+  `fuente = 'otro'` existe, pero no construyas integraciones puntuales sin pedido).
 - Gamificación social entre atletas.
 
 **Cadenas de gimnasios:** ✅ construido (Fase D, ver §0). Un gimnasio es una `organization` con
@@ -632,12 +688,13 @@ entrenador vea solo *sus* asignados en vez de todos los de la org (`athletes.ent
 existe pero todavía no filtra nada).
 
 **App móvil nativa (iOS/Android):** decidida (no es una opción abierta) pero diferida a una
-fase aparte — se eligió explícitamente por sobre PWA/responsive-only. Mientras tanto el panel
-web (`panel/`, ver §9) cubre el uso desde el celular vía navegador, con PWA básica
-("agregar a inicio", ver §0/§9) como paso intermedio razonable. Cuando le llegue el turno a la
-app nativa es una decisión de arquitectura nueva (stack distinto — probablemente React Native
-o Expo dado que el resto es TS, cuentas de developer, publicación en tiendas) — no asumas el
-stack ni arranques código sin confirmar el plan primero.
+fase aparte — se eligió explícitamente por sobre PWA/responsive-only. Mientras tanto la PWA
+(Fase I, ver §0) cubre el uso desde el celular: instalable, offline, barra de pestañas, y la
+conexión con Apple Watch ya funciona sin app nativa (Fase J, vía Atajos de iOS). Cuando le
+llegue el turno a la nativa es una decisión de arquitectura nueva (stack distinto —
+probablemente React Native o Expo dado que el resto es TS, cuentas de developer, publicación
+en tiendas; la de iOS suma HealthKit/watchOS sincronizando contra el MISMO RPC de ingesta de
+la Fase J) — no asumas el stack ni arranques código sin confirmar el plan primero.
 
 ---
 
