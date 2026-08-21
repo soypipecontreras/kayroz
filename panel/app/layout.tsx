@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import ThemeScript from "./ThemeScript";
+import RegisterSW from "./RegisterSW";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -31,6 +32,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#000000",
+  // cover: que el fondo pinte detrás del notch y la barra de gestos del
+  // iPhone cuando la PWA corre standalone — sin esto quedan franjas blancas.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -44,6 +48,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground antialiased`}
       >
         <ThemeScript />
+        <RegisterSW />
         {children}
       </body>
     </html>

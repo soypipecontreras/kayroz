@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updatePerfil } from "./actions";
@@ -119,6 +120,21 @@ export default async function PerfilPage({
           Guardar y ver recomendadas
         </button>
       </form>
+
+      <Link
+        href="/app/salud"
+        className="glass flex items-center justify-between rounded-3xl p-6 transition-colors hover:border-border-strong"
+      >
+        <div>
+          <p className="text-[15px] font-medium">Apple Watch y Salud</p>
+          <p className="mt-0.5 text-sm text-muted">
+            Conectá tu reloj para que tus entrenos aparezcan solos en el historial.
+          </p>
+        </div>
+        <span aria-hidden="true" className="text-muted">
+          →
+        </span>
+      </Link>
     </div>
   );
 }
